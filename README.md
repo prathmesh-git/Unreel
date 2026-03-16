@@ -145,6 +145,49 @@ npm run dev --prefix client
 
 ---
 
+## Deploying to Render
+
+Render is the recommended host — it runs a full Docker container so yt-dlp, ffmpeg, and long-running analysis all work correctly.
+
+### 1. Push to GitHub
+
+```bash
+git add .
+git commit -m "feat: add Dockerfile and render.yaml"
+git push origin main
+```
+
+### 2. Create a MongoDB Atlas database (free)
+
+1. Go to [mongodb.com/atlas](https://www.mongodb.com/atlas) and create a free cluster
+2. Create a database user and whitelist **0.0.0.0/0** (allow all IPs) in Network Access
+3. Copy your connection string — it looks like:
+	`mongodb+srv://user:pass@cluster0.xxxxx.mongodb.net/unreel`
+
+### 3. Deploy on Render
+
+1. Go to [render.com](https://render.com) → **New → Web Service**
+2. Connect your GitHub repo
+3. Render will auto-detect the `render.yaml` — confirm settings:
+	- **Runtime:** Docker
+	- **Plan:** Free
+4. Add environment variables under **Environment**:
+
+	| Key | Value |
+	|-----|-------|
+	| `OPENAI_API_KEY` | your key |
+	| `GROQ_API_KEY` | your key |
+	| `TAVILY_API_KEY` | your key |
+	| `MONGODB_URI` | your Atlas connection string |
+
+5. Click **Deploy** — first build takes ~5 minutes (installs ffmpeg + yt-dlp)
+
+Your app will be live at `https://unreel.onrender.com` (or your custom domain).
+
+> **Note:** The free tier spins down after 15 minutes of inactivity and takes ~30 seconds to wake on the next request. Upgrade to the $7/month Starter plan to keep it always-on.
+
+---
+
 ## License
 
 MIT

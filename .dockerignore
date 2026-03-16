@@ -1,0 +1,15 @@
+node_modules/
+client/node_modules/
+public/
+.env
+*.mp4
+*.mp3
+*.wav
+*.webm
+*.mov
+.DS_Store
+Thumbs.db
+.git
+README.md
+Dockerfile
+.dockerignore
