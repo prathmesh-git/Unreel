@@ -12,17 +12,15 @@ RUN npm run build --prefix client
 # ── Stage 2: Production image ─────────────────────────────────────────────────
 FROM node:20-slim
 
-# Install ffmpeg, python3, and curl (needed for yt-dlp)
+# Install runtime dependencies.
+# Use distro yt-dlp package to avoid TLS/certificate issues during Docker builds.
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
     ffmpeg \
     python3 \
-    curl \
+    yt-dlp \
+    && update-ca-certificates \
     && rm -rf /var/lib/apt/lists/*
-
-# Install yt-dlp binary
-RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp \
-    -o /usr/local/bin/yt-dlp \
-    && chmod +x /usr/local/bin/yt-dlp
 
 WORKDIR /app
 
@@ -37,7 +35,7 @@ COPY modules/ ./modules/
 COPY models/ ./models/
 
 # Copy built frontend from stage 1
-COPY --from=frontend-builder /build/client/../public ./public
+COPY --from=frontend-builder /build/public ./public
 
 EXPOSE 3000
 
