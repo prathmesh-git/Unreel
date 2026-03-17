@@ -10,6 +10,12 @@ const resultsRoutes = require('./routes/results');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const MONGODB_URI = process.env.MONGODB_URI;
+const SITE_URL = (process.env.SITE_URL || '').replace(/\/$/, '');
+
+function getBaseUrl(req) {
+  if (SITE_URL) return SITE_URL;
+  return `${req.protocol}://${req.get('host')}`;
+}
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
 app.use(cors());
@@ -43,6 +49,41 @@ app.get('/api/health', (_req, res) => {
       tavily: !!process.env.TAVILY_API_KEY,
     },
   });
+});
+
+app.get('/sitemap.xml', (req, res) => {
+  const baseUrl = getBaseUrl(req);
+  const today = new Date().toISOString();
+  const urls = [
+    { loc: `${baseUrl}/`, changefreq: 'daily', priority: '1.0', lastmod: today },
+  ];
+
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n` +
+    `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
+    urls.map((u) => (
+      `  <url>\n` +
+      `    <loc>${u.loc}</loc>\n` +
+      `    <lastmod>${u.lastmod}</lastmod>\n` +
+      `    <changefreq>${u.changefreq}</changefreq>\n` +
+      `    <priority>${u.priority}</priority>\n` +
+      `  </url>`
+    )).join('\n') +
+    `\n</urlset>`;
+
+  res.type('application/xml').send(xml);
+});
+
+app.get('/robots.txt', (req, res) => {
+  const baseUrl = getBaseUrl(req);
+  const robots = [
+    'User-agent: *',
+    'Allow: /',
+    'Disallow: /api/',
+    '',
+    `Sitemap: ${baseUrl}/sitemap.xml`,
+  ].join('\n');
+
+  res.type('text/plain').send(robots);
 });
 
 // ─── Serve React Frontend ─────────────────────────────────────────────────────
