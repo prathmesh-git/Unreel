@@ -153,11 +153,18 @@ function getDownloadHint(url, rawError = '') {
   const platform = detectPlatform(url);
   const details = rawError.toLowerCase();
 
+  if (platform === 'YouTube') {
+    if (details.includes('sign in to confirm') || details.includes('bot') || details.includes('429') || details.includes('too many requests')) {
+      return 'YouTube is blocking or rate-limiting this cloud download request right now. Please retry later or upload the file directly.';
+    }
+    return 'YouTube could not be downloaded from this server right now. Please retry later or upload the video file directly.';
+  }
+
   if (details.includes('login required') || details.includes('private')) {
     return 'This post appears private/login-protected, or Instagram is blocking unauthenticated cloud requests for this link. Open a fully public reel URL and try again, or upload the file directly.';
   }
 
-  if (details.includes('cookies-from-browser') || details.includes('cookies')) {
+  if (platform === 'Instagram' && (details.includes('cookies-from-browser') || details.includes('cookies'))) {
     return 'Instagram may require an active logged-in browser session. Log in to Instagram in Chrome/Edge on this machine and try again.';
   }
 
