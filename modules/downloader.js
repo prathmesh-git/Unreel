@@ -7,6 +7,7 @@ const os = require('os');
 const TEMP_DIR = os.tmpdir();
 const INSTAGRAM_BROWSER_CANDIDATES = ['chrome', 'edge', 'firefox'];
 const BROWSER_COOKIE_LABEL_TOKEN = 'cookies';
+let resolvedInstagramCookiesFile = null;
 
 /**
  * Find the yt-dlp executable path.
@@ -60,6 +61,10 @@ function walkDir(dir, target, depth = 0) {
 // Resolve once at startup
 const YT_DLP_PATH = findYtDlp();
 console.log(`[Unreel] yt-dlp resolved to: ${YT_DLP_PATH || 'NOT FOUND'}`);
+const YT_DLP_VERSION = getYtDlpVersion();
+if (YT_DLP_VERSION) {
+  console.log(`[Unreel] yt-dlp version: ${YT_DLP_VERSION}`);
+}
 
 /**
  * Download a video from a URL using yt-dlp
@@ -112,6 +117,16 @@ function buildAttemptArgs(url, outputTemplate, platform) {
     args: [...baseArgs],
   }];
 
+  if (platform === 'YouTube') {
+    attempts.unshift({
+      label: 'youtube-web-android',
+      args: [
+        ...buildBaseArgs(url, outputTemplate),
+        '--extractor-args', 'youtube:player_client=web,android',
+      ],
+    });
+  }
+
   if (platform === 'Instagram') {
     const normalizedUrls = buildInstagramUrlVariants(url);
     const extractorModes = [
@@ -132,7 +147,7 @@ function buildAttemptArgs(url, outputTemplate, platform) {
       }
     }
 
-    const cookiesFile = process.env.INSTAGRAM_COOKIES_FILE;
+    const cookiesFile = getInstagramCookiesFile();
     if (cookiesFile && fs.existsSync(cookiesFile)) {
       const cookieUrl = normalizedUrls[0] || url;
       attempts.push({
@@ -188,6 +203,10 @@ function buildBaseArgs(targetUrl, outputTemplate) {
     '--no-simulate',
     '--print', 'title',
     '--no-warnings',
+    '--retries', '3',
+    '--fragment-retries', '3',
+    '--extractor-retries', '3',
+    '--socket-timeout', '20',
   ];
 }
 
@@ -223,6 +242,32 @@ function buildInstagramUrlVariants(rawUrl) {
   } catch {}
 
   return variants;
+}
+
+function getInstagramCookiesFile() {
+  if (resolvedInstagramCookiesFile) return resolvedInstagramCookiesFile;
+
+  const explicitFile = process.env.INSTAGRAM_COOKIES_FILE;
+  if (explicitFile && fs.existsSync(explicitFile)) {
+    resolvedInstagramCookiesFile = explicitFile;
+    return resolvedInstagramCookiesFile;
+  }
+
+  const base64Cookies = process.env.INSTAGRAM_COOKIES_B64;
+  if (!base64Cookies) return null;
+
+  try {
+    const cookieText = Buffer.from(base64Cookies, 'base64').toString('utf8').trim();
+    if (!cookieText) return null;
+
+    const cookiePath = path.join(TEMP_DIR, 'unreel_instagram_cookies.txt');
+    fs.writeFileSync(cookiePath, cookieText, 'utf8');
+    resolvedInstagramCookiesFile = cookiePath;
+    return resolvedInstagramCookiesFile;
+  } catch (error) {
+    console.warn(`[Unreel] Failed to decode INSTAGRAM_COOKIES_B64: ${error.message}`);
+    return null;
+  }
 }
 
 function runYtDlp(args, outputId, platform) {
@@ -282,4 +327,25 @@ function detectPlatform(url) {
   return 'Unknown';
 }
 
-module.exports = { downloadVideo, detectPlatform };
+function getYtDlpVersion() {
+  if (!YT_DLP_PATH) return null;
+  try {
+    return execSync(`${YT_DLP_PATH} --version`, { encoding: 'utf8' }).trim();
+  } catch {
+    return null;
+  }
+}
+
+function getDownloaderDiagnostics() {
+  return {
+    ytDlpPath: YT_DLP_PATH,
+    ytDlpVersion: YT_DLP_VERSION,
+    instagramCookiesConfigured: !!getInstagramCookiesFile(),
+    browserCookiesEnabled: canUseBrowserCookies(),
+    platform: process.platform,
+    render: !!process.env.RENDER,
+    railway: !!process.env.RAILWAY_ENVIRONMENT,
+  };
+}
+
+module.exports = { downloadVideo, detectPlatform, getDownloaderDiagnostics };

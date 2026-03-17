@@ -165,8 +165,15 @@ function getDownloadHint(url, rawError = '') {
     return 'The reel format is unavailable right now. Please retry in a moment or upload the file directly.';
   }
 
+  if (details.includes('sign in to confirm') || details.includes('bot') || details.includes('429') || details.includes('too many requests')) {
+    return 'This platform is blocking or rate-limiting automated cloud downloads for this link right now. Please retry later or upload the file directly.';
+  }
+
   if (platform === 'Instagram') {
     return 'Instagram blocks some reels depending on account visibility and anti-bot checks. Try again after logging in to Instagram in your browser, or upload the file directly.';
+  }
+  if (platform === 'YouTube') {
+    return 'YouTube may be blocking or rate-limiting this cloud download request. Please try again later or upload the video file directly.';
   }
   if (platform === 'TikTok') {
     return 'TikTok may restrict downloads. Please try uploading the video file instead.';

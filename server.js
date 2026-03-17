@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const path = require('path');
+const { getDownloaderDiagnostics } = require('./modules/downloader');
 
 const analyzeRoutes = require('./routes/analyze');
 const resultsRoutes = require('./routes/results');
@@ -48,6 +49,13 @@ app.get('/api/health', (_req, res) => {
       openai: !!process.env.OPENAI_API_KEY,
       tavily: !!process.env.TAVILY_API_KEY,
     },
+  });
+});
+
+app.get('/api/health/downloader', (_req, res) => {
+  res.json({
+    status: 'ok',
+    downloader: getDownloaderDiagnostics(),
   });
 });
 

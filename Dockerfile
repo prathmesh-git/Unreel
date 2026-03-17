@@ -13,13 +13,14 @@ RUN npm run build --prefix client
 FROM node:20-slim
 
 # Install runtime dependencies.
-# Use distro yt-dlp package to avoid TLS/certificate issues during Docker builds.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
+    curl \
     ffmpeg \
     python3 \
-    yt-dlp \
     && update-ca-certificates \
+    && curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp \
+    && chmod a+rx /usr/local/bin/yt-dlp \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
