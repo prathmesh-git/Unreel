@@ -19,3 +19,5 @@ services:
         sync: false
       - key: INSTAGRAM_COOKIES_B64
         sync: false
+      - key: YTDLP_COOKIES_B64
+        sync: false
