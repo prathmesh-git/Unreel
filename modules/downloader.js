@@ -6,6 +6,7 @@ const os = require('os');
 
 const TEMP_DIR = os.tmpdir();
 const INSTAGRAM_BROWSER_CANDIDATES = ['chrome', 'edge', 'firefox'];
+const BROWSER_COOKIE_LABEL_TOKEN = 'cookies';
 
 /**
  * Find the yt-dlp executable path.
@@ -82,6 +83,7 @@ async function downloadVideo(url) {
 
   const attempts = buildAttemptArgs(url, outputTemplate, platform);
   let lastError = '';
+  let bestNonCookieError = '';
 
   for (const attempt of attempts) {
     try {
@@ -90,12 +92,16 @@ async function downloadVideo(url) {
       return result;
     } catch (err) {
       lastError = err.message || 'Unknown yt-dlp error';
+      if (!attempt.label.includes(BROWSER_COOKIE_LABEL_TOKEN) && !bestNonCookieError) {
+        bestNonCookieError = lastError;
+      }
       console.warn(`[Unreel] Download strategy failed (${attempt.label}): ${lastError.split('\n')[0]}`);
     }
   }
 
   cleanupByOutputId(outputId);
-  throw new Error(`yt-dlp failed. Platform: ${platform}.\n${lastError.slice(0, 700)}`);
+  const errorForUser = (bestNonCookieError || lastError).slice(0, 700);
+  throw new Error(`yt-dlp failed. Platform: ${platform}.\n${errorForUser}`);
 }
 
 function buildAttemptArgs(url, outputTemplate, platform) {
@@ -134,15 +140,26 @@ function buildAttemptArgs(url, outputTemplate, platform) {
       });
     }
 
-    for (const browser of INSTAGRAM_BROWSER_CANDIDATES) {
-      attempts.push({
-        label: `instagram-cookies-from-${browser}`,
-        args: [...instagramArgs, '--cookies-from-browser', browser],
-      });
+    if (canUseBrowserCookies()) {
+      for (const browser of INSTAGRAM_BROWSER_CANDIDATES) {
+        attempts.push({
+          label: `instagram-cookies-from-${browser}`,
+          args: [...instagramArgs, '--cookies-from-browser', browser],
+        });
+      }
     }
   }
 
   return attempts;
+}
+
+function canUseBrowserCookies() {
+  if (process.env.ENABLE_BROWSER_COOKIES === 'true') return true;
+  if (process.env.ENABLE_BROWSER_COOKIES === 'false') return false;
+
+  // Default: allow in local Windows/dev, disable in hosted Linux containers.
+  if (process.env.RENDER || process.env.RAILWAY_ENVIRONMENT) return false;
+  return process.platform === 'win32';
 }
 
 function runYtDlp(args, outputId, platform) {
