@@ -94,10 +94,19 @@ Respond with ONLY a valid JSON object:
  * Fact-check all claims sequentially (to avoid rate limits)
  */
 async function factCheckAll(claims) {
+  if (!Array.isArray(claims) || claims.length === 0) return [];
+
+  const filteredClaims = claims
+    .map(c => (typeof c === 'string' ? c.trim() : ''))
+    .filter(Boolean)
+    .filter(c => !/^no\s+(specific\s+)?factual\s+claims\s+detected\.?$/i.test(c));
+
+  if (filteredClaims.length === 0) return [];
+
   const results = [];
-  for (let i = 0; i < claims.length; i++) {
-    results.push(await factCheckClaim(claims[i]));
-    if (i < claims.length - 1) await new Promise(r => setTimeout(r, 300));
+  for (let i = 0; i < filteredClaims.length; i++) {
+    results.push(await factCheckClaim(filteredClaims[i]));
+    if (i < filteredClaims.length - 1) await new Promise(r => setTimeout(r, 300));
   }
   return results;
 }

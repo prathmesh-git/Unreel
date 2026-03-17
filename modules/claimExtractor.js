@@ -15,7 +15,7 @@ async function extractClaims(transcript) {
   }
 
   if (!transcript || transcript.trim().length < 10) {
-    return ['No clear verbal content detected in the video.'];
+    return [];
   }
 
   const prompt = `You are a fact-checking assistant. Analyze this video transcript and extract all factual, verifiable claims.
@@ -31,7 +31,7 @@ Extract each factual claim as a short, clear sentence. Focus on:
 - News/current events claims
 - Product/service claims
 
-Return ONLY a JSON array of claim strings. Maximum 5 claims. If no clear claims exist, return ["No specific factual claims detected."]
+Return ONLY a JSON array of claim strings. Maximum 5 claims. If no clear claims exist, return an empty array [].
 
 Example: ["Claim 1 here", "Claim 2 here"]`;
 
@@ -57,9 +57,15 @@ Example: ["Claim 1 here", "Claim 2 here"]`;
     const jsonMatch = content.match(/\[[\s\S]*\]/);
     if (jsonMatch) {
       const claims = JSON.parse(jsonMatch[0]);
-      return Array.isArray(claims) ? claims.slice(0, 5) : ['Could not extract claims.'];
+      if (!Array.isArray(claims)) return [];
+
+      return claims
+        .map(c => (typeof c === 'string' ? c.trim() : ''))
+        .filter(Boolean)
+        .filter(c => !/^no\s+(specific\s+)?factual\s+claims\s+detected\.?$/i.test(c))
+        .slice(0, 5);
     }
-    return ['Could not extract structured claims from the video.'];
+    return [];
   } catch (error) {
     const errMsg = error.response?.data?.error?.message || error.message;
     throw new Error(`Claim extraction failed: ${errMsg}`);

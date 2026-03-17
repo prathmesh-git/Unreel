@@ -7,15 +7,24 @@ const GROQ_MODEL = 'llama-3.1-8b-instant';
  * Analyze transcript and claims for bias using Groq LLaMA
  */
 async function analyzeBias(transcript, claims) {
-  if (!process.env.GROQ_API_KEY) {
-    return defaultBias();
+  const cleanedTranscript = typeof transcript === 'string' ? transcript.trim() : '';
+  const cleanClaims = Array.isArray(claims)
+    ? claims.map(c => (typeof c === 'string' ? c.trim() : '')).filter(Boolean)
+    : [];
+
+  if (!cleanedTranscript && cleanClaims.length === 0) {
+    return neutralBias('Not enough textual content was detected to assess bias reliably.');
   }
 
-  const claimsText = claims.join('\n- ');
+  if (!process.env.GROQ_API_KEY) {
+    return neutralBias('Bias model is unavailable because GROQ_API_KEY is not set.');
+  }
+
+  const claimsText = cleanClaims.join('\n- ');
   const prompt = `You are an expert media bias analyst. Analyze this video content for bias.
 
 TRANSCRIPT (first 2000 chars):
-"${transcript.slice(0, 2000)}"
+"${cleanedTranscript.slice(0, 2000)}"
 
 CLAIMS MADE:
 - ${claimsText}
@@ -61,14 +70,20 @@ Respond with ONLY a valid JSON object:
         explanation: result.explanation || 'Bias analysis completed.',
       };
     }
-    return defaultBias();
+    return neutralBias();
   } catch {
-    return defaultBias();
+    return neutralBias();
   }
 }
 
-function defaultBias() {
-  return { score: 50, level: 'MEDIUM', type: 'Unknown', indicators: [], explanation: 'Bias analysis could not be completed.' };
+function neutralBias(explanation = 'Bias analysis could not be completed.') {
+  return {
+    score: 0,
+    level: 'LOW',
+    type: 'None Detected',
+    indicators: [],
+    explanation,
+  };
 }
 
 module.exports = { analyzeBias };
