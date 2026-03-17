@@ -154,7 +154,7 @@ function getDownloadHint(url, rawError = '') {
   const details = rawError.toLowerCase();
 
   if (details.includes('login required') || details.includes('private')) {
-    return 'This post appears private or login-protected. Open it publicly in a browser first, then try again, or upload the file directly.';
+    return 'This post appears private/login-protected, or Instagram is blocking unauthenticated cloud requests for this link. Open a fully public reel URL and try again, or upload the file directly.';
   }
 
   if (details.includes('cookies-from-browser') || details.includes('cookies')) {

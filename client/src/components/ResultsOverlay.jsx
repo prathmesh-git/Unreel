@@ -168,6 +168,13 @@ export default function ResultsOverlay({ data, onClose }) {
             Fact Check Results
             <span className="factcheck-count">({factChecks.length} claim{factChecks.length !== 1 ? 's' : ''} found)</span>
           </div>
+          {factChecks.length === 0 && (
+            <div className="claim-card">
+              <div className="claim-explanation">
+                No verifiable factual statements were detected in this transcript. This usually means the video is mostly opinion, rhetoric, or emotional commentary rather than checkable factual claims.
+              </div>
+            </div>
+          )}
           {factChecks.map((fc, i) => <ClaimCard key={i} fc={fc} />)}
         </div>
 

@@ -105,18 +105,7 @@ async function downloadVideo(url) {
 }
 
 function buildAttemptArgs(url, outputTemplate, platform) {
-  const baseArgs = [
-    url,
-    '-o', outputTemplate,
-    // Prefer mp4; fall back to any best available format.
-    '--format', 'bestvideo[ext=mp4][height<=720]+bestaudio[ext=m4a]/bestvideo[height<=720]+bestaudio/best',
-    '--merge-output-format', 'mp4',
-    '--max-filesize', '50M',
-    '--no-playlist',
-    '--no-simulate',
-    '--print', 'title',
-    '--no-warnings',
-  ];
+  const baseArgs = buildBaseArgs(url, outputTemplate);
 
   const attempts = [{
     label: 'default',
@@ -124,27 +113,52 @@ function buildAttemptArgs(url, outputTemplate, platform) {
   }];
 
   if (platform === 'Instagram') {
-    const instagramArgs = [
-      ...baseArgs,
-      '--extractor-args', 'instagram:player_client=web',
-      '--referer', 'https://www.instagram.com/',
-      '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+    const normalizedUrls = buildInstagramUrlVariants(url);
+    const extractorModes = [
+      { key: 'web-client', value: 'instagram:player_client=web' },
+      { key: 'api-v1', value: 'instagram:api_version=v1' },
+      { key: 'web-client-api-v1', value: 'instagram:player_client=web;api_version=v1' },
     ];
-    attempts.unshift({ label: 'instagram-web-client', args: instagramArgs });
+
+    for (const candidateUrl of normalizedUrls) {
+      for (const mode of extractorModes) {
+        const instagramArgs = [
+          ...buildBaseArgs(candidateUrl, outputTemplate),
+          '--extractor-args', mode.value,
+          '--referer', 'https://www.instagram.com/',
+          '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        ];
+        attempts.unshift({ label: `instagram-${mode.key}:${candidateUrl}`, args: instagramArgs });
+      }
+    }
 
     const cookiesFile = process.env.INSTAGRAM_COOKIES_FILE;
     if (cookiesFile && fs.existsSync(cookiesFile)) {
+      const cookieUrl = normalizedUrls[0] || url;
       attempts.push({
         label: 'instagram-cookies-file',
-        args: [...instagramArgs, '--cookies', cookiesFile],
+        args: [
+          ...buildBaseArgs(cookieUrl, outputTemplate),
+          '--extractor-args', 'instagram:player_client=web;api_version=v1',
+          '--referer', 'https://www.instagram.com/',
+          '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+          '--cookies', cookiesFile,
+        ],
       });
     }
 
     if (canUseBrowserCookies()) {
+      const cookieUrl = normalizedUrls[0] || url;
       for (const browser of INSTAGRAM_BROWSER_CANDIDATES) {
         attempts.push({
           label: `instagram-cookies-from-${browser}`,
-          args: [...instagramArgs, '--cookies-from-browser', browser],
+          args: [
+            ...buildBaseArgs(cookieUrl, outputTemplate),
+            '--extractor-args', 'instagram:player_client=web;api_version=v1',
+            '--referer', 'https://www.instagram.com/',
+            '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            '--cookies-from-browser', browser,
+          ],
         });
       }
     }
@@ -160,6 +174,55 @@ function canUseBrowserCookies() {
   // Default: allow in local Windows/dev, disable in hosted Linux containers.
   if (process.env.RENDER || process.env.RAILWAY_ENVIRONMENT) return false;
   return process.platform === 'win32';
+}
+
+function buildBaseArgs(targetUrl, outputTemplate) {
+  return [
+    targetUrl,
+    '-o', outputTemplate,
+    // Prefer mp4; fall back to any best available format.
+    '--format', 'bestvideo[ext=mp4][height<=720]+bestaudio[ext=m4a]/bestvideo[height<=720]+bestaudio/best',
+    '--merge-output-format', 'mp4',
+    '--max-filesize', '50M',
+    '--no-playlist',
+    '--no-simulate',
+    '--print', 'title',
+    '--no-warnings',
+  ];
+}
+
+function buildInstagramUrlVariants(rawUrl) {
+  const variants = [];
+  const pushUnique = (value) => {
+    if (value && !variants.includes(value)) variants.push(value);
+  };
+
+  pushUnique(rawUrl);
+
+  try {
+    const parsed = new URL(rawUrl);
+    parsed.hash = '';
+    parsed.search = '';
+
+    if (parsed.hostname === 'm.instagram.com') {
+      parsed.hostname = 'www.instagram.com';
+    }
+
+    // Convert some mobile share-style paths to canonical reel paths.
+    parsed.pathname = parsed.pathname.replace(/^\/share\/reel\//, '/reel/');
+
+    if (!parsed.pathname.endsWith('/')) {
+      parsed.pathname = `${parsed.pathname}/`;
+    }
+
+    pushUnique(parsed.toString());
+
+    const noWww = new URL(parsed.toString());
+    noWww.hostname = 'instagram.com';
+    pushUnique(noWww.toString());
+  } catch {}
+
+  return variants;
 }
 
 function runYtDlp(args, outputId, platform) {
