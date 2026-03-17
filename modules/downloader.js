@@ -71,7 +71,7 @@ if (YT_DLP_VERSION) {
  * Download a video from a URL using yt-dlp
  * Supports YouTube Shorts, Instagram Reels, TikTok public videos
  * @param {string} url - Video URL
- * @returns {Promise<{videoPath: string, title: string, platform: string}>}
+ * @returns {Promise<{videoPath: string, title: string, platform: string, publishedAt: string | null}>}
  */
 async function downloadVideo(url) {
   if (!YT_DLP_PATH) {
@@ -211,7 +211,8 @@ function buildBaseArgs(targetUrl, outputTemplate) {
     '--max-filesize', '50M',
     '--no-playlist',
     '--no-simulate',
-    '--print', 'title',
+    '--print', 'UNREEL_TITLE:%(title)s',
+    '--print', 'UNREEL_UPLOAD_DATE:%(upload_date>%Y-%m-%d)s',
     '--no-warnings',
     '--retries', '3',
     '--fragment-retries', '3',
@@ -325,10 +326,11 @@ function runYtDlp(args, outputId, platform) {
       const downloaded = fs.readdirSync(TEMP_DIR).find(f => f.startsWith(`unreel_${outputId}`));
 
       if (code === 0 && downloaded) {
-        const title = stdout.trim().split('\n')[0] || 'Unknown Video';
+        const title = parsePrintedField(stdout, 'UNREEL_TITLE:') || 'Unknown Video';
+        const publishedAt = normalizePublishedDate(parsePrintedField(stdout, 'UNREEL_UPLOAD_DATE:'));
         const videoPath = path.join(TEMP_DIR, downloaded);
         console.log(`[Unreel] Downloaded file: ${videoPath}`);
-        resolve({ videoPath, title, platform });
+        resolve({ videoPath, title, platform, publishedAt });
         return;
       }
 
@@ -369,6 +371,25 @@ function getYtDlpVersion() {
   } catch {
     return null;
   }
+}
+
+function parsePrintedField(stdout, prefix) {
+  const lines = String(stdout || '').split(/\r?\n/);
+  for (const line of lines) {
+    if (line.startsWith(prefix)) {
+      return line.slice(prefix.length).trim();
+    }
+  }
+  return '';
+}
+
+function normalizePublishedDate(value) {
+  if (!value) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  if (/^\d{8}$/.test(value)) {
+    return `${value.slice(0, 4)}-${value.slice(4, 6)}-${value.slice(6, 8)}`;
+  }
+  return null;
 }
 
 function getDownloaderDiagnostics() {

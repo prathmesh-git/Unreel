@@ -38,7 +38,7 @@ router.post('/url', async (req, res) => {
   let videoPath = null;
   try {
     console.log(`[Unreel] Downloading: ${url}`);
-    const { videoPath: vPath, title, platform } = await downloadVideo(url);
+    const { videoPath: vPath, title, platform, publishedAt } = await downloadVideo(url);
     videoPath = vPath;
     console.log(`[Unreel] Downloaded: ${title} (${platform})`);
 
@@ -56,18 +56,21 @@ router.post('/url', async (req, res) => {
     const claims = await extractClaims(fullContent);
 
     console.log('[Unreel] Fact-checking and bias analysis...');
+    const analyzedAt = new Date().toISOString();
+    const inferredDate = inferContentDate(fullContent);
+    const contentDate = publishedAt || inferredDate || null;
     const [factCheckResults, biasResult] = await Promise.all([
-      factCheckAll(claims),
+      factCheckAll(claims, { contentDate, analyzedAt, sourceType: 'url', platform }),
       analyzeBias(fullContent, claims),
     ]);
 
     const analysisData = {
-      videoInfo: { title, platform, url },
+      videoInfo: { title, platform, url, contentDate },
       transcript,
       onScreenText: onScreenText || null,
       factChecks: factCheckResults,
       bias: biasResult,
-      analyzedAt: new Date().toISOString(),
+      analyzedAt,
     };
 
     const savedId = await persistResult(analysisData, 'url');
@@ -95,6 +98,38 @@ router.post('/url', async (req, res) => {
   }
 });
 
+// ─── POST /api/analyze/text ───────────────────────────────────────────────────
+router.post('/text', async (req, res) => {
+  const { text } = req.body;
+  if (!text || text.trim().length < 20) {
+    return res.status(400).json({ error: 'Please provide at least 20 characters of text to analyze.' });
+  }
+  const transcript = text.trim().slice(0, 50000);
+  try {
+    console.log('[Unreel] Analyzing pasted transcript...');
+    const claims = await extractClaims(transcript);
+    const analyzedAt = new Date().toISOString();
+    const contentDate = inferContentDate(transcript);
+    const [factCheckResults, biasResult] = await Promise.all([
+      factCheckAll(claims, { contentDate, analyzedAt, sourceType: 'text', platform: 'Text' }),
+      analyzeBias(transcript, claims),
+    ]);
+    const analysisData = {
+      videoInfo: { title: 'Pasted Transcript', platform: 'Text', url: null, contentDate },
+      transcript,
+      onScreenText: null,
+      factChecks: factCheckResults,
+      bias: biasResult,
+      analyzedAt,
+    };
+    const savedId = await persistResult(analysisData, 'text');
+    res.json(toApiResponse(analysisData, savedId));
+  } catch (error) {
+    console.error('[Unreel] Text analysis error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ─── POST /api/analyze/upload ─────────────────────────────────────────────────
 router.post('/upload', upload.single('video'), async (req, res) => {
   if (!req.file) {
@@ -111,8 +146,10 @@ router.post('/upload', upload.single('video'), async (req, res) => {
     const onScreenText = await extractOnScreenText(keyframes);
     const fullContent = [transcript, onScreenText].filter(Boolean).join('\n\n[ON-SCREEN TEXT]:\n');
     const claims = await extractClaims(fullContent);
+    const analyzedAt = new Date().toISOString();
+    const contentDate = inferContentDate(fullContent);
     const [factCheckResults, biasResult] = await Promise.all([
-      factCheckAll(claims),
+      factCheckAll(claims, { contentDate, analyzedAt, sourceType: 'upload', platform: 'Upload' }),
       analyzeBias(fullContent, claims),
     ]);
 
@@ -121,12 +158,13 @@ router.post('/upload', upload.single('video'), async (req, res) => {
         title: req.file.originalname || 'Uploaded Video',
         platform: 'Upload',
         url: null,
+        contentDate,
       },
       transcript,
       onScreenText: onScreenText || null,
       factChecks: factCheckResults,
       bias: biasResult,
-      analyzedAt: new Date().toISOString(),
+      analyzedAt,
     };
 
     const savedId = await persistResult(analysisData, 'upload');
@@ -186,6 +224,35 @@ function getDownloadHint(url, rawError = '') {
     return 'TikTok may restrict downloads. Please try uploading the video file instead.';
   }
   return 'Please try uploading the video file instead.';
+}
+
+function inferContentDate(text = '') {
+  const sample = String(text).slice(0, 5000);
+
+  const iso = sample.match(/\b(20\d{2})-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])\b/);
+  if (iso) return iso[0];
+
+  const slash = sample.match(/\b(0?[1-9]|1[0-2])[\/-](0?[1-9]|[12]\d|3[01])[\/-](20\d{2})\b/);
+  if (slash) {
+    const mm = slash[1].padStart(2, '0');
+    const dd = slash[2].padStart(2, '0');
+    const yyyy = slash[3];
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  const monthMatch = sample.match(/\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})(?:st|nd|rd|th)?(?:,)?\s+(20\d{2})\b/i);
+  if (monthMatch) {
+    const months = {
+      january: '01', february: '02', march: '03', april: '04', may: '05', june: '06',
+      july: '07', august: '08', september: '09', october: '10', november: '11', december: '12',
+    };
+    const month = months[monthMatch[1].toLowerCase()];
+    const day = monthMatch[2].padStart(2, '0');
+    const year = monthMatch[3];
+    return `${year}-${month}-${day}`;
+  }
+
+  return null;
 }
 
 function toApiResponse(data, resultId) {

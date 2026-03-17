@@ -7,8 +7,10 @@ const TAVILY_API = 'https://api.tavily.com/search';
 /**
  * Fact-check a single claim using Tavily search + Groq LLaMA analysis
  */
-async function factCheckClaim(claim) {
+async function factCheckClaim(claim, context = {}) {
   let searchResults = [];
+  const analyzedAt = context.analyzedAt || new Date().toISOString();
+  const contentDate = context.contentDate || 'Unknown';
 
   // Step 1: Search for evidence using Tavily (optional)
   try {
@@ -17,7 +19,7 @@ async function factCheckClaim(claim) {
         TAVILY_API,
         {
           api_key: process.env.TAVILY_API_KEY,
-          query: claim,
+          query: `${claim} ${contentDate !== 'Unknown' ? `around ${contentDate}` : ''}`,
           search_depth: 'basic',
           max_results: 5,
           include_domains: ['who.int', 'nih.gov', 'bbc.com', 'reuters.com', 'apnews.com', 'snopes.com', 'factcheck.org', 'nature.com', 'pubmed.ncbi.nlm.nih.gov'],
@@ -39,6 +41,8 @@ async function factCheckClaim(claim) {
   const prompt = `You are a professional fact-checker. Analyze this claim and give a verdict.
 
 CLAIM: "${claim}"
+CONTENT DATE (when reel/text was created): ${contentDate}
+ANALYSIS DATE (today): ${analyzedAt}
 
 ${searchContext ? `SEARCH EVIDENCE:\n${searchContext}\n` : 'No search evidence available. Use your knowledge.'}
 
@@ -46,7 +50,9 @@ Respond with ONLY a valid JSON object:
 {
   "verdict": "TRUE" | "FALSE" | "MISLEADING" | "UNVERIFIED",
   "explanation": "2-3 sentence explanation",
-  "confidence": "HIGH" | "MEDIUM" | "LOW"
+  "confidence": "HIGH" | "MEDIUM" | "LOW",
+  "recency": "CURRENT" | "OUTDATED" | "TIMELESS" | "UNCERTAIN",
+  "recencyReason": "1 short sentence about whether timing changes the claim"
 }`;
 
   try {
@@ -69,7 +75,13 @@ Respond with ONLY a valid JSON object:
 
     const content = response.data.choices[0]?.message?.content || '{}';
     const jsonMatch = content.match(/\{[\s\S]*\}/);
-    let result = { verdict: 'UNVERIFIED', explanation: 'Could not analyze this claim.', confidence: 'LOW' };
+    let result = {
+      verdict: 'UNVERIFIED',
+      explanation: 'Could not analyze this claim.',
+      confidence: 'LOW',
+      recency: 'UNCERTAIN',
+      recencyReason: 'Timing could not be assessed.',
+    };
     if (jsonMatch) result = JSON.parse(jsonMatch[0]);
 
     const sources = searchResults.slice(0, 3).map(r => ({
@@ -83,17 +95,27 @@ Respond with ONLY a valid JSON object:
       verdict: result.verdict || 'UNVERIFIED',
       explanation: result.explanation || 'No explanation available.',
       confidence: result.confidence || 'LOW',
+      recency: result.recency || 'UNCERTAIN',
+      recencyReason: result.recencyReason || 'Timing could not be assessed.',
       sources,
     };
   } catch {
-    return { claim, verdict: 'UNVERIFIED', explanation: 'Could not analyze this claim.', confidence: 'LOW', sources: [] };
+    return {
+      claim,
+      verdict: 'UNVERIFIED',
+      explanation: 'Could not analyze this claim.',
+      confidence: 'LOW',
+      recency: 'UNCERTAIN',
+      recencyReason: 'Timing could not be assessed.',
+      sources: [],
+    };
   }
 }
 
 /**
  * Fact-check all claims sequentially (to avoid rate limits)
  */
-async function factCheckAll(claims) {
+async function factCheckAll(claims, context = {}) {
   if (!Array.isArray(claims) || claims.length === 0) return [];
 
   const filteredClaims = claims
@@ -105,7 +127,7 @@ async function factCheckAll(claims) {
 
   const results = [];
   for (let i = 0; i < filteredClaims.length; i++) {
-    results.push(await factCheckClaim(filteredClaims[i]));
+    results.push(await factCheckClaim(filteredClaims[i], context));
     if (i < filteredClaims.length - 1) await new Promise(r => setTimeout(r, 300));
   }
   return results;

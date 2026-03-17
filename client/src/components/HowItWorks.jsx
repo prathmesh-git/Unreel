@@ -2,7 +2,7 @@ import { Link2, Mic, Search, Zap } from 'lucide-react';
 
 const STEPS = [
   { num: '01', Icon: Link2,  title: 'Paste the Link',    desc: 'Drop any reel or short video URL from any platform.' },
-  { num: '02', Icon: Mic,    title: 'AI Transcribes',    desc: 'OpenAI Whisper converts the audio to text with high accuracy.' },
+  { num: '02', Icon: Mic,    title: 'AI Transcribes',    desc: 'Groq Whisper converts the audio to text with high accuracy.' },
   { num: '03', Icon: Search, title: 'Claims Extracted',  desc: 'An LLM identifies every verifiable factual claim in the video.' },
   { num: '04', Icon: Zap,    title: 'Verdict Delivered', desc: 'Each claim is fact-checked against trusted sources. Bias is measured.' },
 ];

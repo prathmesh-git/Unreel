@@ -50,6 +50,12 @@ function ClaimCard({ fc }) {
         {fc.explanation}
         {fc.confidence && <span style={{ color: 'var(--text-3)' }}> · {fc.confidence} confidence</span>}
       </div>
+      {fc.recency && (
+        <div className="claim-explanation" style={{ marginTop: '0.35rem' }}>
+          <strong>Time Check:</strong> {fc.recency}
+          {fc.recencyReason ? ` - ${fc.recencyReason}` : ''}
+        </div>
+      )}
       {fc.sources?.length > 0 && (
         <div className="claim-sources">
           <div className="sources-label">Sources</div>
@@ -142,6 +148,7 @@ export default function ResultsOverlay({ data, onClose }) {
           <div className="video-meta">
             <h3>{videoInfo?.title || 'Video'}</h3>
             <p>{videoInfo?.platform} · {new Date(analyzedAt).toLocaleTimeString()}</p>
+            {videoInfo?.contentDate && <p>Content date detected: {videoInfo.contentDate}</p>}
             {resultId && <p>Analysis ID: {resultId}</p>}
             {videoInfo?.url && (
               <a href={videoInfo.url} target="_blank" rel="noopener noreferrer" className="source-link" style={{ marginTop: '0.4rem' }}>

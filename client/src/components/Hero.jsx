@@ -1,4 +1,4 @@
-import { Link2, Upload, Film, ArrowRight, AlertCircle } from 'lucide-react';
+import { Link2, Upload, Film, ArrowRight, AlertCircle, FileText } from 'lucide-react';
 
 const PLATFORM_ICONS = {
   youtube: (
@@ -28,8 +28,9 @@ const PLATFORM_ICONS = {
 export default function Hero({
   activeTab, setActiveTab, url, setUrl,
   selectedFile, setSelectedFile,
+  transcript, setTranscript,
   status, error, canUpload, currentStep, loadingSteps,
-  onAnalyzeUrl, onAnalyzeUpload, onReset, onSwitchToUpload,
+  onAnalyzeUrl, onAnalyzeUpload, onAnalyzeText, onReset, onSwitchToUpload,
 }) {
   function handleDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
   function handleDragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
@@ -52,7 +53,7 @@ export default function Hero({
       </h1>
 
       <p className="hero-subtitle">
-        Paste any YouTube Short, Instagram Reel, or TikTok link.<br />
+        Paste a URL, upload a video, or add a transcript.<br />
         Our AI analyzes claims, checks facts, and detects bias — in seconds.
       </p>
 
@@ -75,6 +76,13 @@ export default function Hero({
               >
                 <Upload className="icon-sm" /> Upload Video
               </button>
+              <button
+                className={`tab ${activeTab === 'text' ? 'active' : ''}`}
+                role="tab" aria-selected={activeTab === 'text'}
+                onClick={() => { setActiveTab('text'); onReset(); }}
+              >
+                <FileText className="icon-sm" /> Paste Transcript
+              </button>
             </div>
 
             {activeTab === 'url' && (
@@ -85,15 +93,15 @@ export default function Hero({
                     <input
                       type="url" className="url-input" value={url}
                       onChange={e => setUrl(e.target.value)}
-                      placeholder="https://www.youtube.com/shorts/..."
+                      placeholder="https://www.youtube.com/shorts/... or https://www.instagram.com/reel/..."
                       aria-label="Video URL" required
                     />
                   </div>
                   <button type="submit" className="analyze-btn">
-                    <span className="btn-content">Analyze <ArrowRight className="icon-sm" /></span>
+                    <span className="btn-content">Analyze URL <ArrowRight className="icon-sm" /></span>
                   </button>
                 </div>
-                <p className="input-hint">Supports: YouTube Shorts · Instagram Reels · TikTok · Twitter/X</p>
+                <p className="input-hint">YouTube Shorts · Instagram Reels · TikTok · Twitter/X</p>
               </form>
             )}
 
@@ -117,6 +125,28 @@ export default function Hero({
                 </button>
               </form>
             )}
+
+            {activeTab === 'text' && (
+              <form onSubmit={onAnalyzeText}>
+                <div className="input-group vertical">
+                  <textarea
+                    className="transcript-input"
+                    value={transcript}
+                    onChange={e => setTranscript(e.target.value)}
+                    placeholder="Paste the video transcript or any text you want fact-checked…"
+                    aria-label="Transcript text"
+                    rows={6}
+                    required
+                  />
+                  <button type="submit" className="analyze-btn full-width" disabled={transcript.trim().length < 20}>
+                    <span className="btn-content">Analyze Text <ArrowRight className="icon-sm" /></span>
+                  </button>
+                </div>
+                <p className="input-hint">Paste a video transcript, article snippet, or any content to fact-check.</p>
+              </form>
+            )}
+
+
           </>
         )}
 
