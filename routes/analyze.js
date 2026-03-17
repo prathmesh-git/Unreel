@@ -83,7 +83,7 @@ router.post('/url', async (req, res) => {
     }
     if (error.message.includes('yt-dlp failed')) {
       return res.status(422).json({
-        error: `Could not download this video. ${getDownloadHint(url)}`,
+        error: `Could not download this video. ${getDownloadHint(url, error.message)}`,
         canUpload: true,
         platform: detectPlatform(url),
       });
@@ -149,10 +149,24 @@ function isValidUrl(str) {
   }
 }
 
-function getDownloadHint(url) {
+function getDownloadHint(url, rawError = '') {
   const platform = detectPlatform(url);
+  const details = rawError.toLowerCase();
+
+  if (details.includes('login required') || details.includes('private')) {
+    return 'This post appears private or login-protected. Open it publicly in a browser first, then try again, or upload the file directly.';
+  }
+
+  if (details.includes('cookies-from-browser') || details.includes('cookies')) {
+    return 'Instagram may require an active logged-in browser session. Log in to Instagram in Chrome/Edge on this machine and try again.';
+  }
+
+  if (details.includes('requested format is not available')) {
+    return 'The reel format is unavailable right now. Please retry in a moment or upload the file directly.';
+  }
+
   if (platform === 'Instagram') {
-    return 'Instagram restricts video downloads. Please download the reel and upload the file instead.';
+    return 'Instagram blocks some reels depending on account visibility and anti-bot checks. Try again after logging in to Instagram in your browser, or upload the file directly.';
   }
   if (platform === 'TikTok') {
     return 'TikTok may restrict downloads. Please try uploading the video file instead.';

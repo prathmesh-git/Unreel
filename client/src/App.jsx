@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import HowItWorks from './components/HowItWorks';
@@ -23,6 +23,7 @@ export default function App() {
   const [canUpload, setCanUpload]       = useState(false);
   const [results, setResults]           = useState(null);
   const [currentStep, setCurrentStep]   = useState(0);
+  const requestSeqRef                    = useRef(0);
 
   // Simulate loading step progression
   useEffect(() => {
@@ -39,7 +40,9 @@ export default function App() {
 
   async function analyzeUrl(e) {
     e.preventDefault();
-    if (!url.trim()) return;
+    if (!url.trim() || status === 'loading') return;
+    const reqId = ++requestSeqRef.current;
+    setResults(null);
     setStatus('loading');
     setError('');
     setCanUpload(false);
@@ -50,6 +53,7 @@ export default function App() {
         body: JSON.stringify({ url }),
       });
       const data = await res.json();
+      if (reqId !== requestSeqRef.current) return;
       if (!res.ok || !data.success) {
         setError(data.error || 'Analysis failed.');
         setCanUpload(!!data.canUpload);
@@ -59,6 +63,7 @@ export default function App() {
       setResults(data);
       setStatus('results');
     } catch {
+      if (reqId !== requestSeqRef.current) return;
       setError('Could not connect to the server. Make sure the backend is running on port 3000.');
       setStatus('error');
     }
@@ -66,14 +71,18 @@ export default function App() {
 
   async function analyzeUpload(e) {
     e.preventDefault();
-    if (!selectedFile) return;
+    if (!selectedFile || status === 'loading') return;
+    const reqId = ++requestSeqRef.current;
+    setResults(null);
     setStatus('loading');
     setError('');
+    setCanUpload(false);
     const form = new FormData();
     form.append('video', selectedFile);
     try {
       const res = await fetch('/api/analyze/upload', { method: 'POST', body: form });
       const data = await res.json();
+      if (reqId !== requestSeqRef.current) return;
       if (!res.ok || !data.success) {
         setError(data.error || 'Analysis failed.');
         setStatus('error');
@@ -82,18 +91,21 @@ export default function App() {
       setResults(data);
       setStatus('results');
     } catch {
+      if (reqId !== requestSeqRef.current) return;
       setError('Could not connect to the server.');
       setStatus('error');
     }
   }
 
   function reset() {
+    requestSeqRef.current += 1;
     setStatus('idle');
     setError('');
     setUrl('');
     setSelectedFile(null);
     setCanUpload(false);
     setCurrentStep(0);
+    setResults(null);
   }
 
   function closeResults() {

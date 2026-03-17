@@ -5,6 +5,7 @@ const { v4: uuidv4 } = require('uuid');
 const os = require('os');
 
 const TEMP_DIR = os.tmpdir();
+const INSTAGRAM_BROWSER_CANDIDATES = ['chrome', 'edge', 'firefox'];
 
 /**
  * Find the yt-dlp executable path.
@@ -79,68 +80,117 @@ async function downloadVideo(url) {
 
   const platform = detectPlatform(url);
 
-  return new Promise((resolve, reject) => {
-    const args = [
-      url,
-      '-o', outputTemplate,
-      // Prefer mp4; fall back to any best available format
-      '--format', 'bestvideo[ext=mp4][height<=720]+bestaudio[ext=m4a]/bestvideo[height<=720]+bestaudio/best',
-      '--merge-output-format', 'mp4',
-      '--max-filesize', '50M',
-      '--no-playlist',
-      '--no-simulate',   // force download even when --print is used (newer yt-dlp)
-      '--quiet',
-      '--no-warnings',
-      '--print', 'title', // print title to stdout after download
-    ];
+  const attempts = buildAttemptArgs(url, outputTemplate, platform);
+  let lastError = '';
 
-    // For Instagram: hint the extractor to use web client
-    if (platform === 'Instagram') {
-      args.push('--extractor-args', 'instagram:player_client=web');
+  for (const attempt of attempts) {
+    try {
+      const result = await runYtDlp(attempt.args, outputId, platform);
+      console.log(`[Unreel] Download strategy succeeded: ${attempt.label}`);
+      return result;
+    } catch (err) {
+      lastError = err.message || 'Unknown yt-dlp error';
+      console.warn(`[Unreel] Download strategy failed (${attempt.label}): ${lastError.split('\n')[0]}`);
+    }
+  }
+
+  cleanupByOutputId(outputId);
+  throw new Error(`yt-dlp failed. Platform: ${platform}.\n${lastError.slice(0, 700)}`);
+}
+
+function buildAttemptArgs(url, outputTemplate, platform) {
+  const baseArgs = [
+    url,
+    '-o', outputTemplate,
+    // Prefer mp4; fall back to any best available format.
+    '--format', 'bestvideo[ext=mp4][height<=720]+bestaudio[ext=m4a]/bestvideo[height<=720]+bestaudio/best',
+    '--merge-output-format', 'mp4',
+    '--max-filesize', '50M',
+    '--no-playlist',
+    '--no-simulate',
+    '--print', 'title',
+    '--no-warnings',
+  ];
+
+  const attempts = [{
+    label: 'default',
+    args: [...baseArgs],
+  }];
+
+  if (platform === 'Instagram') {
+    const instagramArgs = [
+      ...baseArgs,
+      '--extractor-args', 'instagram:player_client=web',
+      '--referer', 'https://www.instagram.com/',
+      '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+    ];
+    attempts.unshift({ label: 'instagram-web-client', args: instagramArgs });
+
+    const cookiesFile = process.env.INSTAGRAM_COOKIES_FILE;
+    if (cookiesFile && fs.existsSync(cookiesFile)) {
+      attempts.push({
+        label: 'instagram-cookies-file',
+        args: [...instagramArgs, '--cookies', cookiesFile],
+      });
     }
 
+    for (const browser of INSTAGRAM_BROWSER_CANDIDATES) {
+      attempts.push({
+        label: `instagram-cookies-from-${browser}`,
+        args: [...instagramArgs, '--cookies-from-browser', browser],
+      });
+    }
+  }
+
+  return attempts;
+}
+
+function runYtDlp(args, outputId, platform) {
+  return new Promise((resolve, reject) => {
     const ytdlp = spawn(YT_DLP_PATH, args);
 
-    let title = 'Unknown Video';
     let stdout = '';
     let stderr = '';
 
     ytdlp.stdout.on('data', data => { stdout += data.toString(); });
     ytdlp.stderr.on('data', data => { stderr += data.toString(); });
 
-    ytdlp.on('close', code => {
-      // Scan temp dir for any file that matches our UUID prefix
-      const downloaded = fs.readdirSync(TEMP_DIR)
-        .find(f => f.startsWith(`unreel_${outputId}`));
-
-      if (code === 0 && downloaded) {
-        title = stdout.trim().split('\n')[0] || 'Unknown Video';
-        const videoPath = path.join(TEMP_DIR, downloaded);
-        console.log(`[Unreel] Downloaded file: ${videoPath}`);
-        resolve({ videoPath, title, platform });
-      } else {
-        // Clean up any partial files
-        fs.readdirSync(TEMP_DIR)
-          .filter(f => f.startsWith(`unreel_${outputId}`))
-          .forEach(f => { try { fs.unlinkSync(path.join(TEMP_DIR, f)); } catch {} });
-        reject(new Error(
-          `yt-dlp failed (code ${code}). Platform: ${platform}.\n${stderr.slice(0, 500)}`
-        ));
-      }
-    });
-
-    ytdlp.on('error', err => {
-      reject(new Error(
-        `Failed to spawn yt-dlp (${YT_DLP_PATH}): ${err.message}`
-      ));
-    });
-
-    // Timeout after 60 seconds
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       ytdlp.kill();
       reject(new Error('Download timed out after 60 seconds.'));
     }, 60000);
+
+    ytdlp.on('close', code => {
+      clearTimeout(timer);
+      const downloaded = fs.readdirSync(TEMP_DIR).find(f => f.startsWith(`unreel_${outputId}`));
+
+      if (code === 0 && downloaded) {
+        const title = stdout.trim().split('\n')[0] || 'Unknown Video';
+        const videoPath = path.join(TEMP_DIR, downloaded);
+        console.log(`[Unreel] Downloaded file: ${videoPath}`);
+        resolve({ videoPath, title, platform });
+        return;
+      }
+
+      cleanupByOutputId(outputId);
+      reject(new Error(`yt-dlp exited with code ${code}. ${(stderr || stdout).trim().slice(0, 700)}`));
+    });
+
+    ytdlp.on('error', err => {
+      clearTimeout(timer);
+      reject(new Error(`Failed to spawn yt-dlp (${YT_DLP_PATH}): ${err.message}`));
+    });
   });
+}
+
+function cleanupByOutputId(outputId) {
+  fs.readdirSync(TEMP_DIR)
+    .filter(f => f.startsWith(`unreel_${outputId}`))
+    .forEach(f => {
+      try {
+        fs.unlinkSync(path.join(TEMP_DIR, f));
+      } catch {}
+    });
 }
 
 function detectPlatform(url) {
