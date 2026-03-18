@@ -93,7 +93,7 @@ export default function Hero({
                     <input
                       type="url" className="url-input" value={url}
                       onChange={e => setUrl(e.target.value)}
-                      placeholder="https://www.youtube.com/shorts/... or https://www.instagram.com/reel/..."
+                      placeholder="https://www.instagram.com/reel/..."
                       aria-label="Video URL" required
                     />
                   </div>
