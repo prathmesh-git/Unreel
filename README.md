@@ -145,15 +145,15 @@ npm run dev --prefix client
 
 ---
 
-## Deploying to Render
+## Deploying to Railway
 
-Render is the recommended host — it runs a full Docker container so yt-dlp, ffmpeg, and long-running analysis all work correctly.
+Railway is recommended for this project because it supports Docker deployments, which this app needs for yt-dlp, ffmpeg, and long-running analysis jobs.
 
 ### 1. Push to GitHub
 
 ```bash
 git add .
-git commit -m "feat: add Dockerfile and render.yaml"
+git commit -m "feat: add Railway deployment config"
 git push origin main
 ```
 
@@ -164,14 +164,12 @@ git push origin main
 3. Copy your connection string — it looks like:
 	`mongodb+srv://user:pass@cluster0.xxxxx.mongodb.net/unreel`
 
-### 3. Deploy on Render
+### 3. Deploy on Railway
 
-1. Go to [render.com](https://render.com) → **New → Web Service**
-2. Connect your GitHub repo
-3. Render will auto-detect the `render.yaml` — confirm settings:
-	- **Runtime:** Docker
-	- **Plan:** Free
-4. Add environment variables under **Environment**:
+1. Go to [railway.app](https://railway.app) and create a new project
+2. Choose **Deploy from GitHub repo** and select this repository
+3. Railway will detect the `Dockerfile` (or `railway.json`) and build automatically
+4. In your Railway service, add these environment variables:
 
 	| Key | Value |
 	|-----|-------|
@@ -182,9 +180,17 @@ git push origin main
 
 5. Click **Deploy** — first build takes ~5 minutes (installs ffmpeg + yt-dlp)
 
-Your app will be live at `https://unreel.onrender.com` (or your custom domain).
+Your app will be live on your Railway-generated domain (you can also attach a custom domain).
 
-> **Note:** The free tier spins down after 15 minutes of inactivity and takes ~30 seconds to wake on the next request. Upgrade to the $7/month Starter plan to keep it always-on.
+### 4. Optional: set SITE_URL
+
+After your Railway domain is ready, set:
+
+```env
+SITE_URL=https://your-app-name.up.railway.app
+```
+
+This keeps sitemap and robots URLs correct in production.
 
 ---
 
