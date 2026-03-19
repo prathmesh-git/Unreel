@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: unreel
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: TAVILY_API_KEY
+        sync: false
+      - key: MONGODB_URI
+        sync: false
+      - key: INSTAGRAM_COOKIES_B64
+        sync: false
+      - key: YTDLP_COOKIES_B64
+        sync: false
