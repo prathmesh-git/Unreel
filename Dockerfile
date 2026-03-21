@@ -32,6 +32,7 @@ RUN npm install --omit=dev
 # Copy backend source
 COPY server.js ./
 COPY routes/ ./routes/
+COPY middleware/ ./middleware/
 COPY modules/ ./modules/
 COPY models/ ./models/
 
