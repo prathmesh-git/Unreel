@@ -7,6 +7,8 @@ const { getDownloaderDiagnostics } = require('./modules/downloader');
 
 const analyzeRoutes = require('./routes/analyze');
 const resultsRoutes = require('./routes/results');
+const authRoutes = require('./routes/auth');
+const historyRoutes = require('./routes/history');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -36,6 +38,8 @@ if (MONGODB_URI) {
 // ─── Routes ───────────────────────────────────────────────────────────────────
 app.use('/api/analyze', analyzeRoutes);
 app.use('/api/results', resultsRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/history', historyRoutes);
 
 app.get('/api/health', (_req, res) => {
   res.json({

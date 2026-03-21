@@ -12,6 +12,7 @@ const { analyzeBias } = require('../modules/biasAnalyzer');
 const { extractKeyframes } = require('../modules/audioExtractor');
 const { extractOnScreenText } = require('../modules/ocrExtractor');
 const AnalysisResult = require('../models/AnalysisResult');
+const { optionalAuth } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
@@ -28,7 +29,7 @@ const upload = multer({
 });
 
 // ─── POST /api/analyze/url ────────────────────────────────────────────────────
-router.post('/url', async (req, res) => {
+router.post('/url', optionalAuth, async (req, res) => {
   const { url } = req.body;
 
   if (!url || !isValidUrl(url)) {
@@ -73,7 +74,7 @@ router.post('/url', async (req, res) => {
       analyzedAt,
     };
 
-    const savedId = await persistResult(analysisData, 'url');
+    const savedId = await persistResult(analysisData, 'url', req.user?._id);
     res.json(toApiResponse(analysisData, savedId));
   } catch (error) {
     console.error('[Unreel] Error:', error.message);
@@ -99,7 +100,7 @@ router.post('/url', async (req, res) => {
 });
 
 // ─── POST /api/analyze/text ───────────────────────────────────────────────────
-router.post('/text', async (req, res) => {
+router.post('/text', optionalAuth, async (req, res) => {
   const { text } = req.body;
   if (!text || text.trim().length < 20) {
     return res.status(400).json({ error: 'Please provide at least 20 characters of text to analyze.' });
@@ -122,7 +123,7 @@ router.post('/text', async (req, res) => {
       bias: biasResult,
       analyzedAt,
     };
-    const savedId = await persistResult(analysisData, 'text');
+    const savedId = await persistResult(analysisData, 'text', req.user?._id);
     res.json(toApiResponse(analysisData, savedId));
   } catch (error) {
     console.error('[Unreel] Text analysis error:', error.message);
@@ -131,7 +132,7 @@ router.post('/text', async (req, res) => {
 });
 
 // ─── POST /api/analyze/upload ─────────────────────────────────────────────────
-router.post('/upload', upload.single('video'), async (req, res) => {
+router.post('/upload', optionalAuth, upload.single('video'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No video file uploaded.' });
   }
@@ -167,7 +168,7 @@ router.post('/upload', upload.single('video'), async (req, res) => {
       analyzedAt,
     };
 
-    const savedId = await persistResult(analysisData, 'upload');
+    const savedId = await persistResult(analysisData, 'upload', req.user?._id);
     res.json(toApiResponse(analysisData, savedId));
   } catch (error) {
     console.error('[Unreel] Upload error:', error.message);
@@ -269,10 +270,11 @@ function toApiResponse(data, resultId) {
   };
 }
 
-async function persistResult(data, sourceType) {
+async function persistResult(data, sourceType, userId = null) {
   if (mongoose.connection.readyState !== 1) return null;
   try {
     const doc = await AnalysisResult.create({
+      userId: userId || null,
       videoInfo: data.videoInfo,
       transcript: data.transcript,
       onScreenText: data.onScreenText,

@@ -6,25 +6,25 @@ import {
 } from 'lucide-react';
 
 // ── Helpers ──────────────────────────────────────────────────────
-function getPlatformIcon(platform) {
+export function getPlatformIcon(platform) {
   const icons = { YouTube: Film, Instagram: Film, TikTok: Film, Upload: Film };
   const Icon = icons[platform] || Film;
   return <Icon className="icon-lg" />;
 }
 
-function getBiasColor(score) {
+export function getBiasColor(score) {
   if (score <= 25) return '#10b981';
   if (score <= 50) return '#f59e0b';
   if (score <= 75) return '#f97316';
   return '#ef4444';
 }
 
-function getDomain(url) {
+export function getDomain(url) {
   try { return new URL(url).hostname.replace('www.', ''); } catch { return url.slice(0, 30); }
 }
 
 // ── Sub-components ────────────────────────────────────────────────
-function VerdictBadge({ verdict }) {
+export function VerdictBadge({ verdict }) {
   const config = {
     TRUE:        { Icon: CheckCircle2,  cls: 'verdict-true' },
     FALSE:       { Icon: XCircle,       cls: 'verdict-false' },
@@ -39,7 +39,7 @@ function VerdictBadge({ verdict }) {
   );
 }
 
-function ClaimCard({ fc }) {
+export function ClaimCard({ fc }) {
   return (
     <div className="claim-card">
       <div className="claim-header">
@@ -72,7 +72,7 @@ function ClaimCard({ fc }) {
   );
 }
 
-function CollapsibleCard({ icon: Icon, label, children }) {
+export function CollapsibleCard({ icon: Icon, label, children }) {
   const [open, setOpen] = useState(false);
   return (
     <div className="transcript-card">
@@ -85,7 +85,7 @@ function CollapsibleCard({ icon: Icon, label, children }) {
   );
 }
 
-function BiasCard({ bias }) {
+export function BiasCard({ bias }) {
   const [barWidth, setBarWidth] = useState(0);
   useEffect(() => { const t = setTimeout(() => setBarWidth(bias.score), 100); return () => clearTimeout(t); }, [bias.score]);
 

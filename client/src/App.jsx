@@ -1,10 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import HowItWorks from './components/HowItWorks';
 import Features from './components/Features';
 import Footer from './components/Footer';
-import ResultsOverlay from './components/ResultsOverlay';
+import ResultsPage from './components/ResultsPage';
+import { useAuth } from './context/AuthContext';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import HistoryPage from './pages/HistoryPage';
 
 const LOADING_STEPS_URL = [
   { id: 'download',   label: 'Downloading video' },
@@ -25,15 +30,17 @@ const LOADING_STEPS_TEXT = [
   { id: 'bias',       label: 'Bias analysis' },
 ];
 
-export default function App() {
+function HomePage() {
+  const navigate = useNavigate();
+  const { token } = useAuth();
+
   const [activeTab, setActiveTab]       = useState('url');
   const [url, setUrl]                   = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
   const [transcript, setTranscript]     = useState('');
-  const [status, setStatus]             = useState('idle'); // idle | loading | error | results
+  const [status, setStatus]             = useState('idle'); // idle | loading | error
   const [error, setError]               = useState('');
   const [canUpload, setCanUpload]       = useState(false);
-  const [results, setResults]           = useState(null);
   const [currentStep, setCurrentStep]   = useState(0);
   const [loadingSteps, setLoadingSteps] = useState(LOADING_STEPS_UPLOAD);
   const requestSeqRef                    = useRef(0);
@@ -55,7 +62,6 @@ export default function App() {
     e.preventDefault();
     if (!url.trim() || status === 'loading') return;
     const reqId = ++requestSeqRef.current;
-    setResults(null);
     setStatus('loading');
     setError('');
     setCanUpload(false);
@@ -63,7 +69,10 @@ export default function App() {
     try {
       const res = await fetch('/api/analyze/url', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ url }),
       });
       const data = await res.json();
@@ -74,8 +83,14 @@ export default function App() {
         setStatus('error');
         return;
       }
-      setResults(data);
-      setStatus('results');
+      // Navigate to results page if we got a resultId, otherwise show overlay
+      if (data.resultId) {
+        navigate(`/results/${data.resultId}`);
+      } else {
+        // Fallback: store in sessionStorage and show inline
+        sessionStorage.setItem('unreel_last_result', JSON.stringify(data));
+        navigate('/results/latest');
+      }
     } catch {
       if (reqId !== requestSeqRef.current) return;
       setError('Could not connect to the server. Make sure the backend is running on port 3000.');
@@ -87,7 +102,6 @@ export default function App() {
     e.preventDefault();
     if (!selectedFile || status === 'loading') return;
     const reqId = ++requestSeqRef.current;
-    setResults(null);
     setStatus('loading');
     setError('');
     setCanUpload(false);
@@ -95,7 +109,11 @@ export default function App() {
     const form = new FormData();
     form.append('video', selectedFile);
     try {
-      const res = await fetch('/api/analyze/upload', { method: 'POST', body: form });
+      const res = await fetch('/api/analyze/upload', {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: form,
+      });
       const data = await res.json();
       if (reqId !== requestSeqRef.current) return;
       if (!res.ok || !data.success) {
@@ -103,8 +121,12 @@ export default function App() {
         setStatus('error');
         return;
       }
-      setResults(data);
-      setStatus('results');
+      if (data.resultId) {
+        navigate(`/results/${data.resultId}`);
+      } else {
+        sessionStorage.setItem('unreel_last_result', JSON.stringify(data));
+        navigate('/results/latest');
+      }
     } catch {
       if (reqId !== requestSeqRef.current) return;
       setError('Could not connect to the server.');
@@ -116,7 +138,6 @@ export default function App() {
     e.preventDefault();
     if (transcript.trim().length < 20 || status === 'loading') return;
     const reqId = ++requestSeqRef.current;
-    setResults(null);
     setStatus('loading');
     setError('');
     setCanUpload(false);
@@ -124,7 +145,10 @@ export default function App() {
     try {
       const res = await fetch('/api/analyze/text', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ text: transcript }),
       });
       const data = await res.json();
@@ -134,8 +158,12 @@ export default function App() {
         setStatus('error');
         return;
       }
-      setResults(data);
-      setStatus('results');
+      if (data.resultId) {
+        navigate(`/results/${data.resultId}`);
+      } else {
+        sessionStorage.setItem('unreel_last_result', JSON.stringify(data));
+        navigate('/results/latest');
+      }
     } catch {
       if (reqId !== requestSeqRef.current) return;
       setError('Could not connect to the server.');
@@ -152,25 +180,10 @@ export default function App() {
     setTranscript('');
     setCanUpload(false);
     setCurrentStep(0);
-    setResults(null);
-  }
-
-  function closeResults() {
-    setResults(null);
-    setStatus('idle');
-    setUrl('');
-    setSelectedFile(null);
-    setTranscript('');
   }
 
   return (
     <>
-      <div className="bg-orbs" aria-hidden="true">
-        <div className="orb orb-1" /><div className="orb orb-2" /><div className="orb orb-3" />
-      </div>
-
-      <Navbar />
-
       <main>
         <Hero
           activeTab={activeTab}
@@ -195,12 +208,35 @@ export default function App() {
         <HowItWorks />
         <Features />
       </main>
+    </>
+  );
+}
+
+export default function App() {
+  const { loading } = useAuth();
+
+  if (loading) {
+    return null;
+  }
+
+  return (
+    <>
+      <div className="bg-orbs" aria-hidden="true">
+        <div className="orb orb-1" /><div className="orb orb-2" /><div className="orb orb-3" />
+      </div>
+
+      <Navbar />
+
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/results/:id" element={<ResultsPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/history" element={<HistoryPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
 
       <Footer />
-
-      {status === 'results' && results && (
-        <ResultsOverlay data={results} onClose={closeResults} />
-      )}
     </>
   );
 }

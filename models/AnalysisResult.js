@@ -37,6 +37,12 @@ const biasSchema = new mongoose.Schema(
 
 const analysisResultSchema = new mongoose.Schema(
   {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+      index: true,
+    },
     videoInfo: {
       title: { type: String, default: 'Video' },
       platform: { type: String, default: 'Unknown' },
@@ -48,7 +54,7 @@ const analysisResultSchema = new mongoose.Schema(
     bias: { type: biasSchema, required: true },
     sourceType: {
       type: String,
-      enum: ['url', 'upload'],
+      enum: ['url', 'upload', 'text'],
       default: 'url',
     },
     analyzedAt: { type: Date, default: Date.now },
@@ -60,5 +66,6 @@ const analysisResultSchema = new mongoose.Schema(
 
 analysisResultSchema.index({ createdAt: -1 });
 analysisResultSchema.index({ 'videoInfo.platform': 1, createdAt: -1 });
+analysisResultSchema.index({ userId: 1, createdAt: -1 });
 
 module.exports = mongoose.model('AnalysisResult', analysisResultSchema);
