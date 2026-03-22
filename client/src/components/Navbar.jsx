@@ -73,10 +73,18 @@ export default function Navbar() {
               <>
                 <Link className={`auth-nav-link ${isHistory ? 'active' : ''}`} to="/history">History</Link>
                 <span className="auth-nav-user">
-                  {user?.avatar && <img src={user.avatar} alt="User avatar" className="auth-nav-avatar" />}
-                  <span>{user?.name || user?.email || 'User'}</span>
+                  {user?.avatar ? (
+                    <span className="auth-nav-avatar-frame">
+                      <img src={user.avatar} alt="User avatar" className="auth-nav-avatar" />
+                    </span>
+                  ) : (
+                    <span className="auth-nav-avatar-frame auth-nav-avatar-fallback">
+                      {(user?.name || user?.email || 'U').slice(0, 1).toUpperCase()}
+                    </span>
+                  )}
+                  <span className="auth-nav-user-name">{user?.name || user?.email || 'User'}</span>
                 </span>
-                <button type="button" className="auth-nav-link" onClick={onLogout}>Logout</button>
+                <button type="button" className="auth-nav-link auth-nav-link-logout" onClick={onLogout}>Logout</button>
               </>
             )}
           </div>
@@ -109,7 +117,7 @@ export default function Navbar() {
           {isAuthenticated && (
             <div className="mobile-auth-links">
               <Link className={`auth-nav-link ${isHistory ? 'active' : ''}`} to="/history">History</Link>
-              <button type="button" className="auth-nav-link" onClick={onLogout}>Logout</button>
+              <button type="button" className="auth-nav-link auth-nav-link-logout" onClick={onLogout}>Logout</button>
             </div>
           )}
         </div>
