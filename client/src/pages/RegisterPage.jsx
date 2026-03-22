@@ -55,12 +55,13 @@ export default function RegisterPage() {
           },
         });
 
+        const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
         google.accounts.id.renderButton(googleButtonRef.current, {
-          theme: 'outline',
+          theme: currentTheme === 'light' ? 'outline' : 'filled_black',
           size: 'large',
           shape: 'pill',
           text: 'continue_with',
-          width: 260,
+          width: 280,
         });
       } catch (_err) {
         if (!active) return;

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Aperture, Menu, X } from 'lucide-react';
+import { Aperture, Menu, X, Sun, Moon } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -8,6 +8,13 @@ export default function Navbar() {
   const location = useLocation();
   const { user, isAuthenticated, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const [theme, setTheme] = useState(localStorage.getItem('unreel_theme') || 'dark');
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('unreel_theme', theme);
+  }, [theme]);
 
   useEffect(() => {
     setMobileOpen(false);
@@ -61,6 +68,9 @@ export default function Navbar() {
         </div>
 
         <div className="nav-right">
+          <button type="button" className="theme-toggle" onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} aria-label="Toggle theme">
+            {theme === 'dark' ? <Sun className="icon" /> : <Moon className="icon" />}
+          </button>
           <div className="auth-nav-actions">
             {!isAuthenticated && (
               <>

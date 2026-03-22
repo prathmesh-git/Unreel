@@ -5,11 +5,17 @@ const { requireAuth, generateToken } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID;
 const googleClient = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null;
 
 // ─── GET /api/auth/google-config ────────────────────────────────────────────
 router.get('/google-config', (_req, res) => {
+  res.set({
+    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+    Pragma: 'no-cache',
+    Expires: '0',
+    'Surrogate-Control': 'no-store',
+  });
   res.json({
     enabled: Boolean(GOOGLE_CLIENT_ID),
     clientId: GOOGLE_CLIENT_ID || '',
