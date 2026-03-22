@@ -8,6 +8,14 @@ const router = express.Router();
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const googleClient = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null;
 
+// ─── GET /api/auth/google-config ────────────────────────────────────────────
+router.get('/google-config', (_req, res) => {
+  res.json({
+    enabled: Boolean(GOOGLE_CLIENT_ID),
+    clientId: GOOGLE_CLIENT_ID || '',
+  });
+});
+
 // ─── POST /api/auth/register ──────────────────────────────────────────────────
 router.post('/register', async (req, res) => {
   const { name, email, password } = req.body;

@@ -16,39 +16,62 @@ export default function LoginPage() {
   const [googleUnavailableReason, setGoogleUnavailableReason] = useState('');
 
   useEffect(() => {
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
-    const google = window.google;
-    if (!clientId) {
-      setGoogleUnavailableReason('Google sign-in is not configured for this build.');
-      return;
-    }
-    if (!google || !google.accounts?.id || !googleButtonRef.current) {
-      setGoogleUnavailableReason('Google sign-in failed to load. Refresh the page and try again.');
-      return;
-    }
+    let active = true;
 
-    setGoogleUnavailableReason('');
-
-    google.accounts.id.initialize({
-      client_id: clientId,
-      callback: async (response) => {
-        try {
-          setError('');
-          await googleLogin(response.credential);
-          navigate(from, { replace: true });
-        } catch (err) {
-          setError(err.message || 'Google sign-in failed.');
+    async function initGoogleSignIn() {
+      try {
+        const configRes = await fetch('/api/auth/google-config');
+        if (!configRes.ok) {
+          throw new Error('Could not load Google sign-in configuration.');
         }
-      },
-    });
 
-    google.accounts.id.renderButton(googleButtonRef.current, {
-      theme: 'outline',
-      size: 'large',
-      shape: 'pill',
-      text: 'continue_with',
-      width: 260,
-    });
+        const { enabled, clientId } = await configRes.json();
+        const google = window.google;
+
+        if (!active) return;
+
+        if (!enabled || !clientId) {
+          setGoogleUnavailableReason('Google sign-in is not configured on this server.');
+          return;
+        }
+        if (!google || !google.accounts?.id || !googleButtonRef.current) {
+          setGoogleUnavailableReason('Google sign-in failed to load. Refresh the page and try again.');
+          return;
+        }
+
+        setGoogleUnavailableReason('');
+
+        google.accounts.id.initialize({
+          client_id: clientId,
+          callback: async (response) => {
+            try {
+              setError('');
+              await googleLogin(response.credential);
+              navigate(from, { replace: true });
+            } catch (err) {
+              setError(err.message || 'Google sign-in failed.');
+            }
+          },
+        });
+
+        google.accounts.id.renderButton(googleButtonRef.current, {
+          theme: 'outline',
+          size: 'large',
+          shape: 'pill',
+          text: 'continue_with',
+          width: 260,
+        });
+      } catch (_err) {
+        if (!active) return;
+        setGoogleUnavailableReason('Google sign-in failed to load. Refresh the page and try again.');
+      }
+    }
+
+    initGoogleSignIn();
+
+    return () => {
+      active = false;
+    };
   }, [googleLogin, navigate, from]);
 
   async function onSubmit(e) {
