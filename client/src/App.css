@@ -92,6 +92,7 @@ svg.icon-2xl { width: 36px; height: 36px; stroke-width: 1.5; flex-shrink: 0; }
 .google-button-wrap { display: flex; align-items: center; justify-content: center; min-height: 42px; }
 .auth-footnote { color: var(--text-2); text-align: center; font-size: 0.83rem; margin-top: 0.9rem; }
 .auth-footnote a { color: var(--purple-2); text-decoration: none; }
+.auth-helper-note { margin: 0.5rem 0 0; color: var(--text-3); font-size: 0.82rem; text-align: center; }
 .auth-error { color: #fda4af; font-size: 0.82rem; margin-top: 0.25rem; }
 
 /* ── History Page ── */

@@ -13,11 +13,21 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [googleUnavailableReason, setGoogleUnavailableReason] = useState('');
 
   useEffect(() => {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
     const google = window.google;
-    if (!clientId || !google || !google.accounts?.id || !googleButtonRef.current) return;
+    if (!clientId) {
+      setGoogleUnavailableReason('Google sign-in is not configured for this build.');
+      return;
+    }
+    if (!google || !google.accounts?.id || !googleButtonRef.current) {
+      setGoogleUnavailableReason('Google sign-in failed to load. Refresh the page and try again.');
+      return;
+    }
+
+    setGoogleUnavailableReason('');
 
     google.accounts.id.initialize({
       client_id: clientId,
@@ -102,6 +112,7 @@ export default function LoginPage() {
 
         <div className="auth-divider"><span>or</span></div>
         <div className="google-button-wrap" ref={googleButtonRef} />
+        {googleUnavailableReason && <p className="auth-helper-note">{googleUnavailableReason}</p>}
 
         <p className="auth-footnote">
           New here? <Link to="/register">Create an account</Link>
