@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const path = require('path');
+const fs = require('fs');
 const { getDownloaderDiagnostics } = require('./modules/downloader');
 
 const analyzeRoutes = require('./routes/analyze');
@@ -14,6 +15,8 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const MONGODB_URI = process.env.MONGODB_URI;
 const SITE_URL = (process.env.SITE_URL || '').replace(/\/$/, '');
+const publicDir = path.join(__dirname, 'public');
+const hasBuiltFrontend = fs.existsSync(path.join(publicDir, 'index.html'));
 
 function getBaseUrl(req) {
   if (SITE_URL) return SITE_URL;
@@ -21,14 +24,15 @@ function getBaseUrl(req) {
 }
 
 const isProd = process.env.NODE_ENV === 'production';
+const shouldServeFrontend = isProd || hasBuiltFrontend;
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
 app.use(cors());
 app.use(express.json());
 
-// Serve static frontend assets only in production
-if (isProd) {
-  app.use(express.static(path.join(__dirname, 'public')));
+// Serve static frontend assets whenever a frontend build is available.
+if (shouldServeFrontend) {
+  app.use(express.static(publicDir));
 }
 
 // ─── Database ─────────────────────────────────────────────────────────────────
@@ -104,10 +108,10 @@ app.get('/robots.txt', (req, res) => {
   res.type('text/plain').send(robots);
 });
 
-// ─── Serve React Frontend (production only) ──────────────────────────────────
-if (isProd) {
+// ─── Serve React Frontend (when build exists) ─────────────────────────────────
+if (shouldServeFrontend) {
   app.get('*', (_req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    res.sendFile(path.join(publicDir, 'index.html'));
   });
 }
 
