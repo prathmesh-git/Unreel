@@ -418,6 +418,12 @@ main { position: relative; z-index: 1; }
 .transcript-text { color: var(--text-2); font-size: 0.85rem; line-height: 1.75; font-style: italic; background: var(--bg-overlay); padding: 0.85rem; border-radius: var(--radius-sm); white-space: pre-wrap; word-break: break-word; overflow-wrap: break-word; overflow-x: hidden; }
 
 /* ══════════════════════════════════════
+   ANALYZE PAGE (loading / error)
+══════════════════════════════════════ */
+.analyze-page { position: relative; z-index: 1; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 6rem 1rem 3rem; animation: fadeIn 0.3s ease; }
+.analyze-card-page { width: 100%; max-width: 520px; background: var(--bg-card-high); border: 1px solid var(--border); border-radius: 32px; padding: 2.5rem 2rem; backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px); box-shadow: var(--shadow-card); }
+
+/* ══════════════════════════════════════
    RESULTS PAGE (full-page route)
 ══════════════════════════════════════ */
 .results-page { position: relative; z-index: 1; min-height: 100vh; padding: 6rem 1rem 3rem; animation: fadeIn 0.3s ease; }

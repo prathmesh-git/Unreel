@@ -20,10 +20,16 @@ function getBaseUrl(req) {
   return `${req.protocol}://${req.get('host')}`;
 }
 
+const isProd = process.env.NODE_ENV === 'production';
+
 // ─── Middleware ───────────────────────────────────────────────────────────────
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+
+// Serve static frontend assets only in production
+if (isProd) {
+  app.use(express.static(path.join(__dirname, 'public')));
+}
 
 // ─── Database ─────────────────────────────────────────────────────────────────
 if (MONGODB_URI) {
@@ -98,10 +104,12 @@ app.get('/robots.txt', (req, res) => {
   res.type('text/plain').send(robots);
 });
 
-// ─── Serve React Frontend ─────────────────────────────────────────────────────
-app.get('*', (_req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+// ─── Serve React Frontend (production only) ──────────────────────────────────
+if (isProd) {
+  app.get('*', (_req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  });
+}
 
 app.listen(PORT, () => {
   console.log(`

@@ -21,6 +21,8 @@ export default function Navbar() {
   }, [location.pathname, location.hash]);
 
   const isHistory = useMemo(() => location.pathname === '/history', [location.pathname]);
+  const isAnalyzing = useMemo(() => location.pathname === '/analyze' || location.pathname.startsWith('/results'), [location.pathname]);
+  const isHome = useMemo(() => location.pathname === '/', [location.pathname]);
 
   function goHome() {
     setMobileOpen(false);
@@ -61,9 +63,13 @@ export default function Navbar() {
           </button>
 
           <div className="nav-links">
-            <button type="button" className="nav-link-btn" onClick={() => goToSection('how-it-works')}>How it Works</button>
-            <button type="button" className="nav-link-btn" onClick={() => goToSection('features')}>Features</button>
-            <button type="button" className="nav-link-btn cta" onClick={goHome}>Analyze</button>
+            {isHome && (
+              <>
+                <button type="button" className="nav-link-btn" onClick={() => goToSection('how-it-works')}>How it Works</button>
+                <button type="button" className="nav-link-btn" onClick={() => goToSection('features')}>Features</button>
+              </>
+            )}
+            <button type="button" className={`nav-link-btn cta ${isHome ? 'active' : ''}`} onClick={goHome}>Analyze</button>
           </div>
         </div>
 
@@ -114,8 +120,12 @@ export default function Navbar() {
       {mobileOpen && (
         <div className="mobile-nav-panel">
           <button type="button" className="mobile-nav-link" onClick={goHome}>Analyze</button>
-          <button type="button" className="mobile-nav-link" onClick={() => goToSection('how-it-works')}>How it Works</button>
-          <button type="button" className="mobile-nav-link" onClick={() => goToSection('features')}>Features</button>
+          {isHome && (
+            <>
+              <button type="button" className="mobile-nav-link" onClick={() => goToSection('how-it-works')}>How it Works</button>
+              <button type="button" className="mobile-nav-link" onClick={() => goToSection('features')}>Features</button>
+            </>
+          )}
 
           {!isAuthenticated && (
             <div className="mobile-auth-links">

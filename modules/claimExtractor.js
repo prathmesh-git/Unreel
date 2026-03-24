@@ -18,31 +18,28 @@ async function extractClaims(transcript) {
     return [];
   }
 
-  const prompt = `You are a fact-checking assistant. Analyze this video transcript and extract all factual, verifiable claims.
+  const systemPrompt = `You are a fact-checking assistant. Your job is to extract factual, verifiable claims from video transcripts.
+Focus on: Health/medical, Scientific, Statistical, Historical, News/current events, and Product/service claims.
+Return ONLY a JSON array of claim strings. Maximum 5 claims. If no clear claims exist, return an empty array [].
+Example: ["Claim 1 here", "Claim 2 here"]`;
 
-TRANSCRIPT:
+  const userPrompt = `TRANSCRIPT:
 "${transcript.slice(0, 3000)}"
 
-Extract each factual claim as a short, clear sentence. Focus on:
-- Health/medical claims
-- Scientific claims
-- Statistical claims
-- Historical claims
-- News/current events claims
-- Product/service claims
-
-Return ONLY a JSON array of claim strings. Maximum 5 claims. If no clear claims exist, return an empty array [].
-
-Example: ["Claim 1 here", "Claim 2 here"]`;
+Extract each factual claim as a short, clear sentence.`;
 
   try {
     const response = await axios.post(
       GROQ_API,
       {
         model: GROQ_MODEL,
-        messages: [{ role: 'user', content: prompt }],
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
         max_tokens: 500,
-        temperature: 0.2,
+        temperature: 0,
+        seed: 42,
       },
       {
         headers: {
@@ -66,14 +63,15 @@ Example: ["Claim 1 here", "Claim 2 here"]`;
 }
 
 async function extractClaimsFallback(transcript) {
-  const prompt = `Extract up to 3 checkable claims or strong assertions from this transcript.
-
+  const systemPrompt = `You extract checkable claims from transcripts.
 Rules:
 - Prefer statements that can be verified against sources.
 - Include geopolitical, health, scientific, statistical, historical, or current-events assertions.
 - Ignore greetings, opinions without assertions, and vague emotional language.
 - Output plain text only, one claim per line, no JSON and no numbering.
-- If no claims exist, output exactly: NO_CLAIMS
+- If no claims exist, output exactly: NO_CLAIMS`;
+
+  const userPrompt = `Extract up to 3 checkable claims from this transcript.
 
 TRANSCRIPT:
 "${transcript.slice(0, 3000)}"`;
@@ -82,9 +80,13 @@ TRANSCRIPT:
     GROQ_API,
     {
       model: GROQ_MODEL,
-      messages: [{ role: 'user', content: prompt }],
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
       max_tokens: 300,
-      temperature: 0.1,
+      temperature: 0,
+      seed: 42,
     },
     {
       headers: {

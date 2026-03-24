@@ -38,14 +38,7 @@ async function factCheckClaim(claim, context = {}) {
     .map((r, i) => `Source ${i + 1} [${r.url}]: ${r.content?.slice(0, 300)}`)
     .join('\n\n');
 
-  const prompt = `You are a professional fact-checker. Analyze this claim and give a verdict.
-
-CLAIM: "${claim}"
-CONTENT DATE (when reel/text was created): ${contentDate}
-ANALYSIS DATE (today): ${analyzedAt}
-
-${searchContext ? `SEARCH EVIDENCE:\n${searchContext}\n` : 'No search evidence available. Use your knowledge.'}
-
+  const systemPrompt = `You are a professional fact-checker. You analyze claims and give verdicts.
 Respond with ONLY a valid JSON object:
 {
   "verdict": "TRUE" | "FALSE" | "MISLEADING" | "UNVERIFIED",
@@ -55,14 +48,26 @@ Respond with ONLY a valid JSON object:
   "recencyReason": "1 short sentence about whether timing changes the claim"
 }`;
 
+  const userPrompt = `CLAIM: "${claim}"
+CONTENT DATE (when reel/text was created): ${contentDate}
+ANALYSIS DATE (today): ${analyzedAt}
+
+${searchContext ? `SEARCH EVIDENCE:\n${searchContext}\n` : 'No search evidence available. Use your knowledge.'}
+
+Analyze this claim and give a verdict.`;
+
   try {
     const response = await axios.post(
       GROQ_API,
       {
         model: GROQ_MODEL,
-        messages: [{ role: 'user', content: prompt }],
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
         max_tokens: 300,
-        temperature: 0.1,
+        temperature: 0,
+        seed: 42,
       },
       {
         headers: {

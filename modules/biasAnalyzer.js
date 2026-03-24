@@ -21,16 +21,9 @@ async function analyzeBias(transcript, claims) {
   }
 
   const claimsText = cleanClaims.join('\n- ');
-  const prompt = `You are an expert media bias analyst. Analyze this video content for bias.
 
-TRANSCRIPT (first 2000 chars):
-"${cleanedTranscript.slice(0, 2000)}"
-
-CLAIMS MADE:
-- ${claimsText}
-
+  const systemPrompt = `You are an expert media bias analyst. You analyze video content for bias.
 Analyze for: emotional/sensationalist language, one-sided facts, missing context, health misinformation, political bias, fear-mongering.
-
 Respond with ONLY a valid JSON object:
 {
   "score": <0-100, where 0=neutral, 100=extremely biased>,
@@ -40,14 +33,26 @@ Respond with ONLY a valid JSON object:
   "explanation": "2-3 sentence explanation"
 }`;
 
+  const userPrompt = `TRANSCRIPT (first 2000 chars):
+"${cleanedTranscript.slice(0, 2000)}"
+
+CLAIMS MADE:
+- ${claimsText}
+
+Analyze this content for bias.`;
+
   try {
     const response = await axios.post(
       GROQ_API,
       {
         model: GROQ_MODEL,
-        messages: [{ role: 'user', content: prompt }],
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
         max_tokens: 400,
-        temperature: 0.2,
+        temperature: 0,
+        seed: 42,
       },
       {
         headers: {

@@ -1,4 +1,4 @@
-import { Link2, Upload, Film, ArrowRight, AlertCircle, FileText } from 'lucide-react';
+import { Link2, Upload, Film, ArrowRight, FileText } from 'lucide-react';
 
 const PLATFORM_ICONS = {
   youtube: (
@@ -29,8 +29,7 @@ export default function Hero({
   activeTab, setActiveTab, url, setUrl,
   selectedFile, setSelectedFile,
   transcript, setTranscript,
-  status, error, canUpload, currentStep, loadingSteps,
-  onAnalyzeUrl, onAnalyzeUpload, onAnalyzeText, onReset, onSwitchToUpload,
+  onAnalyzeUrl, onAnalyzeUpload, onAnalyzeText,
 }) {
   function handleDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
   function handleDragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
@@ -59,139 +58,99 @@ export default function Hero({
 
       {/* Analyze Card */}
       <div className="analyze-card">
-        {status === 'idle' && (
-          <>
-            <div className="tabs" role="tablist">
-              <button
-                className={`tab ${activeTab === 'url' ? 'active' : ''}`}
-                role="tab" aria-selected={activeTab === 'url'}
-                onClick={() => { setActiveTab('url'); onReset(); }}
-              >
-                <Link2 className="icon-sm" /> Paste URL
-              </button>
-              <button
-                className={`tab ${activeTab === 'upload' ? 'active' : ''}`}
-                role="tab" aria-selected={activeTab === 'upload'}
-                onClick={() => { setActiveTab('upload'); onReset(); }}
-              >
-                <Upload className="icon-sm" /> Upload Video
-              </button>
-              <button
-                className={`tab ${activeTab === 'text' ? 'active' : ''}`}
-                role="tab" aria-selected={activeTab === 'text'}
-                onClick={() => { setActiveTab('text'); onReset(); }}
-              >
-                <FileText className="icon-sm" /> Paste Transcript
+        <div className="tabs" role="tablist">
+          <button
+            className={`tab ${activeTab === 'url' ? 'active' : ''}`}
+            role="tab" aria-selected={activeTab === 'url'}
+            onClick={() => setActiveTab('url')}
+          >
+            <Link2 className="icon-sm" /> Paste URL
+          </button>
+          <button
+            className={`tab ${activeTab === 'upload' ? 'active' : ''}`}
+            role="tab" aria-selected={activeTab === 'upload'}
+            onClick={() => setActiveTab('upload')}
+          >
+            <Upload className="icon-sm" /> Upload Video
+          </button>
+          <button
+            className={`tab ${activeTab === 'text' ? 'active' : ''}`}
+            role="tab" aria-selected={activeTab === 'text'}
+            onClick={() => setActiveTab('text')}
+          >
+            <FileText className="icon-sm" /> Paste Transcript
+          </button>
+        </div>
+
+        {activeTab === 'url' && (
+          <form onSubmit={onAnalyzeUrl}>
+            <div className="input-group">
+              <div className="input-wrapper">
+                <span className="input-icon"><Link2 className="icon-sm" /></span>
+                <input
+                  type="url" className="url-input" value={url}
+                  onChange={e => setUrl(e.target.value)}
+                  placeholder="https://www.instagram.com/reel/..."
+                  aria-label="Video URL" required
+                />
+              </div>
+              <button type="submit" className="analyze-btn">
+                <span className="btn-content">Analyze URL <ArrowRight className="icon-sm" /></span>
               </button>
             </div>
-
-            {activeTab === 'url' && (
-              <form onSubmit={onAnalyzeUrl}>
-                <div className="input-group">
-                  <div className="input-wrapper">
-                    <span className="input-icon"><Link2 className="icon-sm" /></span>
-                    <input
-                      type="url" className="url-input" value={url}
-                      onChange={e => setUrl(e.target.value)}
-                      placeholder="https://www.instagram.com/reel/..."
-                      aria-label="Video URL" required
-                    />
-                  </div>
-                  <button type="submit" className="analyze-btn">
-                    <span className="btn-content">Analyze URL <ArrowRight className="icon-sm" /></span>
-                  </button>
-                </div>
-                <p className="input-hint">YouTube Shorts · Instagram Reels · TikTok · Twitter/X</p>
-              </form>
-            )}
-
-            {activeTab === 'upload' && (
-              <form onSubmit={onAnalyzeUpload}>
-                <div
-                  className="upload-area"
-                  onClick={() => document.getElementById('file-input').click()}
-                  onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}
-                  role="button" tabIndex={0} aria-label="Upload video"
-                >
-                  <div className="upload-area-icon"><Film className="icon-2xl" /></div>
-                  <p className="upload-text">Click to upload or drag & drop</p>
-                  <p className="upload-hint">MP4, MOV, AVI · Max 100MB</p>
-                  {selectedFile && <p className="upload-selected">{selectedFile.name}</p>}
-                </div>
-                <input id="file-input" type="file" accept="video/*,audio/*" style={{ display: 'none' }}
-                  onChange={e => setSelectedFile(e.target.files[0])} />
-                <button type="submit" className="analyze-btn full-width" disabled={!selectedFile}>
-                  <span className="btn-content">Analyze Video <ArrowRight className="icon-sm" /></span>
-                </button>
-              </form>
-            )}
-
-            {activeTab === 'text' && (
-              <form onSubmit={onAnalyzeText}>
-                <div className="input-group vertical">
-                  <textarea
-                    className="transcript-input"
-                    value={transcript}
-                    onChange={e => setTranscript(e.target.value)}
-                    placeholder="Paste the video transcript or any text you want fact-checked…"
-                    aria-label="Transcript text"
-                    rows={6}
-                    required
-                  />
-                  <button type="submit" className="analyze-btn full-width" disabled={transcript.trim().length < 20}>
-                    <span className="btn-content">Analyze Text <ArrowRight className="icon-sm" /></span>
-                  </button>
-                </div>
-                <p className="input-hint">Paste a video transcript, article snippet, or any content to fact-check.</p>
-              </form>
-            )}
-
-
-          </>
+            <p className="input-hint">YouTube Shorts · Instagram Reels · TikTok · Twitter/X</p>
+          </form>
         )}
 
-        {status === 'loading' && (
-          <div className="loading-state">
-            <div className="loading-animation" aria-hidden="true">
-              <div className="loading-ring" />
-              <div className="loading-ring delay-1" />
-              <div className="loading-ring delay-2" />
+        {activeTab === 'upload' && (
+          <form onSubmit={onAnalyzeUpload}>
+            <div
+              className="upload-area"
+              onClick={() => document.getElementById('file-input').click()}
+              onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}
+              role="button" tabIndex={0} aria-label="Upload video"
+            >
+              <div className="upload-area-icon"><Film className="icon-2xl" /></div>
+              <p className="upload-text">Click to upload or drag & drop</p>
+              <p className="upload-hint">MP4, MOV, AVI · Max 100MB</p>
+              {selectedFile && <p className="upload-selected">{selectedFile.name}</p>}
             </div>
-            <p className="loading-title">Analyzing your video...</p>
-            <div className="loading-steps">
-              {loadingSteps.map((s, i) => (
-                <div key={s.id} className={`step ${i === currentStep ? 'active' : i < currentStep ? 'done' : ''}`}>
-                  <span className="step-dot" aria-hidden="true" />
-                  <span>{s.label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+            <input id="file-input" type="file" accept="video/*,audio/*" style={{ display: 'none' }}
+              onChange={e => setSelectedFile(e.target.files[0])} />
+            <button type="submit" className="analyze-btn full-width" disabled={!selectedFile}>
+              <span className="btn-content">Analyze Video <ArrowRight className="icon-sm" /></span>
+            </button>
+          </form>
         )}
 
-        {status === 'error' && (
-          <div className="error-state" role="alert">
-            <div className="error-icon"><AlertCircle className="icon-xl" /></div>
-            <p className="error-message">{error}</p>
-            {canUpload && (
-              <button className="upload-fallback-btn" onClick={onSwitchToUpload}>
-                <Upload className="icon-sm" /> Upload the video file instead
+        {activeTab === 'text' && (
+          <form onSubmit={onAnalyzeText}>
+            <div className="input-group vertical">
+              <textarea
+                className="transcript-input"
+                value={transcript}
+                onChange={e => setTranscript(e.target.value)}
+                placeholder="Paste the video transcript or any text you want fact-checked…"
+                aria-label="Transcript text"
+                rows={6}
+                required
+              />
+              <button type="submit" className="analyze-btn full-width" disabled={transcript.trim().length < 20}>
+                <span className="btn-content">Analyze Text <ArrowRight className="icon-sm" /></span>
               </button>
-            )}
-            <button className="retry-btn" onClick={onReset}>Try Again</button>
-          </div>
+            </div>
+            <p className="input-hint">Paste a video transcript, article snippet, or any content to fact-check.</p>
+          </form>
         )}
       </div>
 
       {/* Platform badges */}
-      {status === 'idle' && (
-        <div className="platform-badges" aria-label="Supported platforms">
-          <span className="platform-badge yt">{PLATFORM_ICONS.youtube} YouTube</span>
-          <span className="platform-badge ig">{PLATFORM_ICONS.instagram} Instagram</span>
-          <span className="platform-badge tt">{PLATFORM_ICONS.tiktok} TikTok</span>
-          <span className="platform-badge tw">{PLATFORM_ICONS.twitter} Twitter/X</span>
-        </div>
-      )}
+      <div className="platform-badges" aria-label="Supported platforms">
+        <span className="platform-badge yt">{PLATFORM_ICONS.youtube} YouTube</span>
+        <span className="platform-badge ig">{PLATFORM_ICONS.instagram} Instagram</span>
+        <span className="platform-badge tt">{PLATFORM_ICONS.tiktok} TikTok</span>
+        <span className="platform-badge tw">{PLATFORM_ICONS.twitter} Twitter/X</span>
+      </div>
     </section>
   );
 }
