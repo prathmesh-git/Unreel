@@ -5,6 +5,7 @@ const mongoose = require('mongoose');
 const path = require('path');
 const fs = require('fs');
 const { getDownloaderDiagnostics } = require('./modules/downloader');
+const { getMailDiagnostics } = require('./modules/mailer');
 
 const analyzeRoutes = require('./routes/analyze');
 const resultsRoutes = require('./routes/results');
@@ -63,6 +64,7 @@ app.get('/api/health', (_req, res) => {
       openai: !!process.env.OPENAI_API_KEY,
       tavily: !!process.env.TAVILY_API_KEY,
     },
+    mail: getMailDiagnostics(),
   });
 });
 

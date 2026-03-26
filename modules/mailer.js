@@ -33,6 +33,19 @@ function getTransporter() {
   return transporter;
 }
 
+function getMailDiagnostics() {
+  const port = Number(process.env.SMTP_PORT || 587);
+  return {
+    configured: Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS),
+    hostConfigured: Boolean(process.env.SMTP_HOST),
+    port,
+    userConfigured: Boolean(process.env.SMTP_USER),
+    passConfigured: Boolean(process.env.SMTP_PASS),
+    fromConfigured: Boolean(process.env.SMTP_FROM || process.env.MAIL_FROM),
+    secure: port === 465,
+  };
+}
+
 async function sendWelcomeEmail({ name, email }) {
   const mailer = getTransporter();
   if (!mailer) {
@@ -177,4 +190,5 @@ async function sendAnalysisResultEmail({ name, email, analysisData, resultId }) 
 module.exports = {
   sendWelcomeEmail,
   sendAnalysisResultEmail,
+  getMailDiagnostics,
 };
