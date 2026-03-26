@@ -15,16 +15,17 @@ function escapeHtml(input) {
 function getTransporter() {
   if (transporter) return transporter;
 
-  const host = process.env.SMTP_HOST;
-  const port = Number(process.env.SMTP_PORT || 587);
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-  const secure = String(process.env.SMTP_SECURE || '').toLowerCase() === 'true' || port === 465;
-  const requireTLS = String(process.env.SMTP_REQUIRE_TLS || '').toLowerCase() === 'true';
-  const ignoreTLS = String(process.env.SMTP_IGNORE_TLS || '').toLowerCase() === 'true';
-  const rejectUnauthorized = String(process.env.SMTP_TLS_REJECT_UNAUTHORIZED || '').toLowerCase() !== 'false';
+  const host = (process.env.SMTP_HOST || '').trim();
+  const port = Number((process.env.SMTP_PORT || '587').trim());
+  const user = (process.env.SMTP_USER || '').trim();
+  const pass = (process.env.SMTP_PASS || '').trim();
+  const secure = String(process.env.SMTP_SECURE || '').toLowerCase().trim() === 'true' || port === 465;
+  const requireTLS = String(process.env.SMTP_REQUIRE_TLS || '').toLowerCase().trim() === 'true';
+  const ignoreTLS = String(process.env.SMTP_IGNORE_TLS || '').toLowerCase().trim() === 'true';
+  const rejectUnauthorized = String(process.env.SMTP_TLS_REJECT_UNAUTHORIZED || '').toLowerCase().trim() !== 'false';
 
   if (!host || !user || !pass) {
+    console.warn('[Unreel] SMTP_HOST, SMTP_USER, or SMTP_PASS is missing. Emails will be skipped.');
     return null;
   }
 
@@ -50,19 +51,20 @@ function getTransporter() {
 }
 
 function resolveFrom(siteName) {
-  if (process.env.SMTP_FROM) return process.env.SMTP_FROM;
-  if (process.env.MAIL_FROM) return process.env.MAIL_FROM;
+  const envFrom = (process.env.SMTP_FROM || process.env.MAIL_FROM || '').trim();
+  if (envFrom) return envFrom;
 
+  const smtpUser = (process.env.SMTP_USER || '').trim();
   // Many providers reject unauthenticated sender domains in production.
-  return `"${siteName}" <${process.env.SMTP_USER}>`;
+  return `"${siteName}" <${smtpUser}>`;
 }
 
 function buildSenderOptions(siteName) {
-  const smtpUser = process.env.SMTP_USER;
+  const smtpUser = (process.env.SMTP_USER || '').trim();
   const desiredFrom = resolveFrom(siteName);
   const useCustomFrom = Boolean(process.env.SMTP_FROM || process.env.MAIL_FROM);
 
-  // For many SMTP providers, envelope/sender must align with authenticated user.
+  // For many SMTP providers (like Gmail), envelope/sender must align with authenticated user.
   if (useCustomFrom && smtpUser) {
     return {
       from: desiredFrom,
@@ -76,11 +78,8 @@ function buildSenderOptions(siteName) {
 
   return {
     from: desiredFrom,
-    envelope: smtpUser
-      ? {
-        from: smtpUser,
-      }
-      : undefined,
+    replyTo: desiredFrom,
+    envelope: smtpUser ? { from: smtpUser } : undefined,
   };
 }
 
