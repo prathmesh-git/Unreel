@@ -1,7 +1,10 @@
 const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
-let transporter;
-let transporterConfig;
+// ── Transport singletons ─────────────────────────────────────────────────────
+let _resend;
+let _nodemailerTransporter;
+let _nodemailerConfig;
 
 function escapeHtml(input) {
   return String(input)
@@ -12,8 +15,18 @@ function escapeHtml(input) {
     .replace(/'/g, '&#39;');
 }
 
-function getTransporter() {
-  if (transporter) return transporter;
+// ── Resend (HTTP API – works on Render free tier) ────────────────────────────
+function getResend() {
+  if (_resend) return _resend;
+  const apiKey = (process.env.RESEND_API_KEY || '').trim();
+  if (!apiKey) return null;
+  _resend = new Resend(apiKey);
+  return _resend;
+}
+
+// ── Nodemailer (SMTP – fallback for local dev / paid hosts) ──────────────────
+function getNodemailerTransporter() {
+  if (_nodemailerTransporter) return _nodemailerTransporter;
 
   const host = (process.env.SMTP_HOST || '').trim();
   const port = Number((process.env.SMTP_PORT || '587').trim());
@@ -24,58 +37,50 @@ function getTransporter() {
   const ignoreTLS = String(process.env.SMTP_IGNORE_TLS || '').toLowerCase().trim() === 'true';
   const rejectUnauthorized = String(process.env.SMTP_TLS_REJECT_UNAUTHORIZED || '').toLowerCase().trim() !== 'false';
 
-  if (!host || !user || !pass) {
-    console.warn('[Unreel] SMTP_HOST, SMTP_USER, or SMTP_PASS is missing. Emails will be skipped.');
-    return null;
-  }
+  if (!host || !user || !pass) return null;
 
-  transporterConfig = {
+  _nodemailerConfig = {
     host,
     port,
     secure,
     requireTLS,
     ignoreTLS,
-    // Force IPv4 – many cloud hosts (Render, Railway) lack IPv6 outbound,
-    // and Node.js prefers AAAA records, causing ENETUNREACH on smtp.gmail.com.
     family: 4,
     connectionTimeout: Number(process.env.SMTP_CONNECTION_TIMEOUT_MS || 15000),
     greetingTimeout: Number(process.env.SMTP_GREETING_TIMEOUT_MS || 15000),
     socketTimeout: Number(process.env.SMTP_SOCKET_TIMEOUT_MS || 20000),
     auth: { user, pass },
-    tls: {
-      // Keep strict TLS by default; allow override for legacy SMTP providers.
-      rejectUnauthorized,
-    },
+    tls: { rejectUnauthorized },
   };
 
-  transporter = nodemailer.createTransport(transporterConfig);
-
-  return transporter;
+  _nodemailerTransporter = nodemailer.createTransport(_nodemailerConfig);
+  return _nodemailerTransporter;
 }
 
-function resolveFrom(siteName) {
-  const envFrom = (process.env.SMTP_FROM || process.env.MAIL_FROM || '').trim();
-  if (envFrom) return envFrom;
+// ── Which transport is active? ───────────────────────────────────────────────
+function useResend() {
+  return Boolean(getResend());
+}
 
+// ── Sender helpers ───────────────────────────────────────────────────────────
+function resolveFrom(siteName) {
+  const envFrom = (process.env.RESEND_FROM || process.env.SMTP_FROM || process.env.MAIL_FROM || '').trim();
+  if (envFrom) return envFrom;
   const smtpUser = (process.env.SMTP_USER || '').trim();
-  // Many providers reject unauthenticated sender domains in production.
   return `"${siteName}" <${smtpUser}>`;
 }
 
 function buildSenderOptions(siteName) {
   const smtpUser = (process.env.SMTP_USER || '').trim();
   const desiredFrom = resolveFrom(siteName);
-  const useCustomFrom = Boolean(process.env.SMTP_FROM || process.env.MAIL_FROM);
+  const useCustomFrom = Boolean(process.env.RESEND_FROM || process.env.SMTP_FROM || process.env.MAIL_FROM);
 
-  // For many SMTP providers (like Gmail), envelope/sender must align with authenticated user.
   if (useCustomFrom && smtpUser) {
     return {
       from: desiredFrom,
       sender: smtpUser,
       replyTo: desiredFrom,
-      envelope: {
-        from: smtpUser,
-      },
+      envelope: { from: smtpUser },
     };
   }
 
@@ -86,6 +91,7 @@ function buildSenderOptions(siteName) {
   };
 }
 
+// ── Diagnostics & verification ───────────────────────────────────────────────
 function serializeMailError(err) {
   if (!err) return { message: 'Unknown mail error' };
   return {
@@ -98,62 +104,97 @@ function serializeMailError(err) {
 }
 
 function getMailDiagnostics() {
+  const isResend = useResend();
   const port = Number(process.env.SMTP_PORT || 587);
   const secure = String(process.env.SMTP_SECURE || '').toLowerCase() === 'true' || port === 465;
+
   return {
-    configured: Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS),
+    transport: isResend ? 'resend' : 'smtp',
+    configured: isResend
+      ? Boolean(process.env.RESEND_API_KEY)
+      : Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS),
+    resendConfigured: Boolean(process.env.RESEND_API_KEY),
     hostConfigured: Boolean(process.env.SMTP_HOST),
     port,
     userConfigured: Boolean(process.env.SMTP_USER),
     passConfigured: Boolean(process.env.SMTP_PASS),
-    fromConfigured: Boolean(process.env.SMTP_FROM || process.env.MAIL_FROM),
+    fromConfigured: Boolean(process.env.RESEND_FROM || process.env.SMTP_FROM || process.env.MAIL_FROM),
     secure,
     requireTLS: String(process.env.SMTP_REQUIRE_TLS || '').toLowerCase() === 'true',
     ignoreTLS: String(process.env.SMTP_IGNORE_TLS || '').toLowerCase() === 'true',
     tlsRejectUnauthorized: String(process.env.SMTP_TLS_REJECT_UNAUTHORIZED || '').toLowerCase() !== 'false',
-    usingCustomFrom: Boolean(process.env.SMTP_FROM || process.env.MAIL_FROM),
+    usingCustomFrom: Boolean(process.env.RESEND_FROM || process.env.SMTP_FROM || process.env.MAIL_FROM),
   };
 }
 
 async function verifyMailTransport() {
-  const mailer = getTransporter();
+  // Resend: send a lightweight API call to confirm the key is valid.
+  if (useResend()) {
+    try {
+      const resend = getResend();
+      await resend.domains.list();
+      return { ok: true, transport: 'resend' };
+    } catch (err) {
+      return { ok: false, transport: 'resend', reason: 'Resend API verification failed.', error: serializeMailError(err) };
+    }
+  }
+
+  // Nodemailer fallback
+  const mailer = getNodemailerTransporter();
   if (!mailer) {
-    return { ok: false, reason: 'SMTP is not configured.' };
+    return { ok: false, reason: 'No email transport configured. Set RESEND_API_KEY or SMTP_HOST/USER/PASS.' };
   }
 
   try {
     await mailer.verify();
     return {
       ok: true,
+      transport: 'smtp',
       config: {
-        host: transporterConfig?.host,
-        port: transporterConfig?.port,
-        secure: transporterConfig?.secure,
+        host: _nodemailerConfig?.host,
+        port: _nodemailerConfig?.port,
+        secure: _nodemailerConfig?.secure,
       },
     };
   } catch (err) {
-    return {
-      ok: false,
-      reason: 'SMTP verify failed.',
-      error: serializeMailError(err),
-    };
+    return { ok: false, transport: 'smtp', reason: 'SMTP verify failed.', error: serializeMailError(err) };
   }
 }
 
+// ── Core send helper ─────────────────────────────────────────────────────────
+async function sendMail({ from, to, replyTo, subject, text, html }) {
+  console.log(`[Unreel] sendMail → transport=${useResend() ? 'resend' : 'smtp'} from="${from}" to="${to}" subject="${subject}"`);
+
+  if (useResend()) {
+    const resend = getResend();
+    const { data, error } = await resend.emails.send({ from, to: Array.isArray(to) ? to : [to], replyTo, subject, text, html });
+    if (error) {
+      console.error('[Unreel] Resend API error:', JSON.stringify(error));
+      throw new Error(error.message || JSON.stringify(error));
+    }
+    console.log('[Unreel] Resend sent OK:', JSON.stringify(data));
+    return data;
+  }
+
+  const mailer = getNodemailerTransporter();
+  if (!mailer) throw new Error('No email transport configured.');
+  return mailer.sendMail({ from, to, replyTo, subject, text, html });
+}
+
+// ── Welcome email ────────────────────────────────────────────────────────────
 async function sendWelcomeEmail({ name, email }) {
-  const mailer = getTransporter();
-  if (!mailer) {
-    return { skipped: true, reason: 'SMTP is not configured.' };
+  if (!useResend() && !getNodemailerTransporter()) {
+    return { skipped: true, reason: 'No email transport configured.' };
   }
 
   const siteName = process.env.MAIL_BRAND_NAME || 'Unreel';
   const siteUrl = (process.env.SITE_URL || 'https://www.unreeled.in').replace(/\/$/, '');
   const brandColor = process.env.MAIL_BRAND_COLOR || '#7c3aed';
   const logoUrl = process.env.MAIL_LOGO_URL || `${siteUrl}/og-image.png`;
-  const senderOptions = buildSenderOptions(siteName);
   const safeName = escapeHtml((name || 'there').trim());
-
+  const fromAddr = resolveFrom(siteName);
   const ctaUrl = siteUrl;
+
   const html = `
     <div style="background:#f4f4f8;padding:28px 10px;font-family:Arial,sans-serif;">
       <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:620px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #ececf5;">
@@ -184,8 +225,8 @@ async function sendWelcomeEmail({ name, email }) {
     </div>
   `;
 
-  await mailer.sendMail({
-    ...senderOptions,
+  await sendMail({
+    from: fromAddr,
     to: email,
     subject: `Welcome to ${siteName}`,
     text: `Hi ${safeName},\n\nWelcome to ${siteName}. Your account is ready, and you can now analyze videos, save history, and continue where you left off.\n\nIf you did not create this account, please ignore this email.\n\n- The ${siteName} Team`,
@@ -195,6 +236,7 @@ async function sendWelcomeEmail({ name, email }) {
   return { skipped: false };
 }
 
+// ── Analysis result email ────────────────────────────────────────────────────
 function verdictToLabel(verdict = 'UNVERIFIED') {
   if (verdict === 'TRUE') return 'True';
   if (verdict === 'FALSE') return 'False';
@@ -203,16 +245,15 @@ function verdictToLabel(verdict = 'UNVERIFIED') {
 }
 
 async function sendAnalysisResultEmail({ name, email, analysisData, resultId }) {
-  const mailer = getTransporter();
-  if (!mailer) {
-    return { skipped: true, reason: 'SMTP is not configured.' };
+  if (!useResend() && !getNodemailerTransporter()) {
+    return { skipped: true, reason: 'No email transport configured.' };
   }
 
   const siteName = process.env.MAIL_BRAND_NAME || 'Unreel';
   const siteUrl = (process.env.SITE_URL || 'https://www.unreeled.in').replace(/\/$/, '');
   const brandColor = process.env.MAIL_BRAND_COLOR || '#7c3aed';
   const logoUrl = process.env.MAIL_LOGO_URL || `${siteUrl}/og-image.png`;
-  const senderOptions = buildSenderOptions(siteName);
+  const fromAddr = resolveFrom(siteName);
 
   const safeName = escapeHtml((name || 'there').trim());
   const title = analysisData?.videoInfo?.title || 'Video';
@@ -270,8 +311,8 @@ async function sendAnalysisResultEmail({ name, email, analysisData, resultId }) 
     </div>
   `;
 
-  await mailer.sendMail({
-    ...senderOptions,
+  await sendMail({
+    from: fromAddr,
     to: email,
     subject: `Your ${siteName} analysis result is ready`,
     text: `Hi ${safeName},\n\nYour analysis is ready for \"${title}\" (${platform}).\nBias score: ${biasScore ?? 'N/A'}\nBias level: ${biasLevel}\nClaims checked: ${totalClaims}\n\nTop findings:\n${textSummary}\n\nView full analysis: ${resultUrl}`,
