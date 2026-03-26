@@ -196,40 +196,77 @@ async function sendWelcomeEmail({ name, email }) {
   const ctaUrl = siteUrl;
 
   const html = `
-    <div style="background:#f4f4f8;padding:28px 10px;font-family:Arial,sans-serif;">
-      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:620px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #ececf5;">
-        <tr>
-          <td style="background:${brandColor};padding:22px 24px;text-align:center;">
-            <img src="${logoUrl}" alt="${siteName} banner" style="display:block;max-width:100%;height:auto;border-radius:10px;border:0;" />
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:24px 24px 8px;color:#111827;">
-            <h1 style="margin:0 0 12px;font-size:26px;line-height:1.2;">Welcome to ${siteName}, ${safeName}!</h1>
-            <p style="margin:0 0 10px;font-size:15px;line-height:1.7;color:#374151;">Your account is live and ready to use.</p>
-            <p style="margin:0 0 14px;font-size:15px;line-height:1.7;color:#374151;">You can now analyze viral videos, save your history, and keep track of truth checks in one place.</p>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:8px 24px 4px;">
-            <a href="${ctaUrl}" style="display:inline-block;background:${brandColor};color:#ffffff;text-decoration:none;padding:11px 18px;border-radius:999px;font-size:14px;font-weight:700;">Open ${siteName}</a>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:18px 24px 24px;">
-            <p style="margin:0;font-size:13px;line-height:1.7;color:#6b7280;">If you did not create this account, you can safely ignore this email.</p>
-            <p style="margin:14px 0 0;font-size:13px;color:#9ca3af;">- The ${siteName} Team</p>
-          </td>
-        </tr>
-      </table>
-    </div>
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Welcome to ${siteName}</title>
+      </head>
+      <body style="margin:0;padding:0;background-color:#f4f7fa;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+        <div style="background-color:#f4f7fa;padding:40px 20px;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;margin:0 auto;background-color:#ffffff;border-radius:24px;overflow:hidden;box-shadow:0 12px 30px rgba(0,0,0,0.06);border:1px solid #e5e9f0;">
+            <!-- Top Accent Bar -->
+            <tr><td style="height:6px;background-color:${brandColor};"></td></tr>
+            
+            <!-- White Modern Header -->
+            <tr>
+              <td style="padding:48px 40px 32px;text-align:center;">
+                <img src="${logoUrl}" alt="${siteName}" style="display:inline-block;max-width:140px;height:auto;border-radius:12px;" />
+                <p style="margin:16px 0 0;font-size:12px;font-weight:700;color:${brandColor};text-transform:uppercase;letter-spacing:0.1em;">Reveal the truth behind every reel</p>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:0 48px 48px;">
+                <h1 style="margin:0 0 16px;font-size:32px;font-weight:800;line-height:1.2;color:#1a202c;letter-spacing:-0.03em;">Welcome to the fold, ${safeName}</h1>
+                <p style="margin:0 0 32px;font-size:17px;line-height:1.7;color:#4a5568;">Your account is ready. We're here to help you navigate through viral misinformation with precision and clarity.</p>
+                
+                <div style="background-color:#f8faff;border-radius:20px;padding:32px;margin-bottom:40px;border:1px solid #edf2f7;">
+                  <h2 style="margin:0 0 20px;font-size:14px;font-weight:800;color:${brandColor};text-transform:uppercase;letter-spacing:0.06em;">Getting Started</h2>
+                  <div style="margin-bottom:16px;">
+                    <p style="margin:0;font-size:16px;font-weight:700;color:#2d3748;">🎬 Paste any URL</p>
+                    <p style="margin:4px 0 0 28px;font-size:14px;color:#718096;">Analyze YouTube Shorts, Instagram Reels, or TikToks in seconds.</p>
+                  </div>
+                  <div style="margin-bottom:16px;">
+                    <p style="margin:0;font-size:16px;font-weight:700;color:#2d3748;">⚖️ Check for Bias</p>
+                    <p style="margin:4px 0 0 28px;font-size:14px;color:#718096;">Get objective scores on narrative sentiment and political leaning.</p>
+                  </div>
+                  <div>
+                    <p style="margin:0;font-size:16px;font-weight:700;color:#2d3748;">✅ Verify Claims</p>
+                    <p style="margin:4px 0 0 28px;font-size:14px;color:#718096;">Real-time fact-checking powered by advanced AI modules.</p>
+                  </div>
+                </div>
+
+                <div style="text-align:center;">
+                  <a href="${ctaUrl}" style="display:inline-block;background-color:${brandColor};color:#ffffff;text-decoration:none;padding:18px 48px;border-radius:16px;font-size:16px;font-weight:800;box-shadow:0 8px 20px -4px rgba(124,58,237,0.4);">Launch Dashboard</a>
+                </div>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:0 48px 48px;text-align:center;">
+                <hr style="border:0;border-top:1px solid #edf2f7;margin:0 0 32px;">
+                <p style="margin:0;font-size:13px;color:#a0aec0;line-height:1.6;">Build your personal history of truth with Unreel.</p>
+                <div style="margin:20px 0 0;">
+                  <span style="font-size:14px;font-weight:700;color:#4a5568;">The ${siteName} Team</span>
+                </div>
+              </td>
+            </tr>
+          </table>
+          <div style="max-width:600px;margin:32px auto 0;text-align:center;">
+            <p style="font-size:12px;color:#a0aec0;">&copy; ${new Date().getFullYear()} ${siteName} &middot; <a href="${siteUrl}/privacy" style="color:#a0aec0;text-decoration:underline;">Privacy Policy</a></p>
+          </div>
+        </div>
+      </body>
+    </html>
   `;
 
   await sendMail({
     from: fromAddr,
     to: email,
     subject: `Welcome to ${siteName}`,
-    text: `Hi ${safeName},\n\nWelcome to ${siteName}. Your account is ready, and you can now analyze videos, save history, and continue where you left off.\n\nIf you did not create this account, please ignore this email.\n\n- The ${siteName} Team`,
+    text: `Welcome to ${siteName}, ${safeName}!\n\nYour account is live and ready to use. You can now analyze viral videos, track fact-checks, and build your history of truth.\n\nGet started here: ${ctaUrl}\n\n- The ${siteName} Team`,
     html,
   });
 
@@ -268,54 +305,115 @@ async function sendAnalysisResultEmail({ name, email, analysisData, resultId }) 
   const escapedTitle = escapeHtml(title);
   const escapedPlatform = escapeHtml(platform);
 
+  const verdictColorMap = {
+    'TRUE': '#10b981',
+    'FALSE': '#ef4444',
+    'MISLEADING': '#f59e0b',
+    'UNVERIFIED': '#6b7280'
+  };
+
   const claimsHtml = topClaims.length
     ? topClaims.map((item) => {
-      const verdict = verdictToLabel(item?.verdict);
+      const verdict = item?.verdict || 'UNVERIFIED';
+      const label = verdictToLabel(verdict);
+      const color = verdictColorMap[verdict] || '#6b7280';
       const claim = escapeHtml(item?.claim || 'Claim');
-      return `<li style="margin:0 0 8px;color:#374151;"><strong>${verdict}:</strong> ${claim}</li>`;
+      return `
+        <div style="margin-bottom:16px;padding:16px;border-radius:12px;background-color:#f9fafb;border-left:4px solid ${color};">
+          <div style="display:inline-block;padding:2px 8px;border-radius:9999px;background-color:${color};color:#ffffff;font-size:10px;font-weight:800;text-transform:uppercase;margin-bottom:8px;">${label}</div>
+          <p style="margin:0;font-size:14px;line-height:1.5;color:#1f2937;">${claim}</p>
+        </div>
+      `;
     }).join('')
-    : '<li style="margin:0;color:#6b7280;">No specific claims were extracted.</li>';
+    : '<p style="margin:0;color:#6b7280;font-style:italic;">No specific claims were extracted.</p>';
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Analysis Ready - ${siteName}</title>
+      </head>
+      <body style="margin:0;padding:0;background-color:#f4f7fa;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+        <div style="background-color:#f4f7fa;padding:40px 20px;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;margin:0 auto;background-color:#ffffff;border-radius:24px;overflow:hidden;box-shadow:0 12px 30px rgba(0,0,0,0.06);border:1px solid #e5e9f0;">
+            <!-- Top Accent Bar -->
+            <tr><td style="height:6px;background-color:${brandColor};"></td></tr>
+
+            <!-- White Modern Header -->
+            <tr>
+              <td style="padding:40px 40px 24px;text-align:center;">
+                <img src="${logoUrl}" alt="${siteName}" style="display:inline-block;max-width:110px;height:auto;border-radius:8px;" />
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:0 48px 48px;">
+                <div style="text-align:center;margin-bottom:32px;">
+                  <p style="margin:0 0 8px;font-size:13px;font-weight:800;color:${brandColor};text-transform:uppercase;letter-spacing:0.1em;">Analysis Report</p>
+                  <h1 style="margin:0;font-size:26px;font-weight:800;line-height:1.3;color:#1a202c;letter-spacing:-0.03em;">${escapedTitle}</h1>
+                </div>
+                
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:40px;">
+                  <tr>
+                    <td style="width:33.33%;padding-right:12px;">
+                      <div style="background-color:#f8f9ff;padding:16px 8px;border-radius:16px;text-align:center;border:1px solid #edf2f7;">
+                        <p style="margin:0;font-size:10px;font-weight:800;color:#718096;text-transform:uppercase;letter-spacing:0.05em;">Bias Score</p>
+                        <p style="margin:6px 0 0;font-size:24px;font-weight:900;color:#1a202c;">${biasScore ?? 'N/A'}</p>
+                      </div>
+                    </td>
+                    <td style="width:33.33%;padding:0 6px;">
+                      <div style="background-color:#f8f9ff;padding:16px 8px;border-radius:16px;text-align:center;border:1px solid #edf2f7;">
+                        <p style="margin:0;font-size:10px;font-weight:800;color:#718096;text-transform:uppercase;letter-spacing:0.05em;">Level</p>
+                        <p style="margin:6px 0 0;font-size:16px;font-weight:800;color:#1a202c;white-space:nowrap;">${escapeHtml(biasLevel)}</p>
+                      </div>
+                    </td>
+                    <td style="width:33.33%;padding-left:12px;">
+                      <div style="background-color:#f8f9ff;padding:16px 8px;border-radius:16px;text-align:center;border:1px solid #edf2f7;">
+                        <p style="margin:0;font-size:10px;font-weight:800;color:#718096;text-transform:uppercase;letter-spacing:0.05em;">Claims</p>
+                        <p style="margin:6px 0 0;font-size:24px;font-weight:900;color:#1a202c;">${totalClaims}</p>
+                      </div>
+                    </td>
+                  </tr>
+                </table>
+
+                <h2 style="margin:0 0 20px;font-size:15px;font-weight:800;color:#2d3748;text-transform:uppercase;letter-spacing:0.05em;">Key Findings</h2>
+                <div style="margin-bottom:40px;">
+                  ${claimsHtml}
+                </div>
+
+                <div style="text-align:center;margin-bottom:12px;">
+                  <a href="${resultUrl}" style="display:inline-block;background-color:${brandColor};color:#ffffff;text-decoration:none;padding:18px 44px;border-radius:16px;font-size:16px;font-weight:800;box-shadow:0 8px 20px -4px rgba(124,58,237,0.4);">View Full Assessment</a>
+                </div>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:0 48px 48px;text-align:center;">
+                <hr style="border:0;border-top:1px solid #edf2f7;margin:0 0 32px;">
+                <p style="margin:0;font-size:12px;color:#a0aec0;line-height:1.7;">You received this because you requested a fact-check on Unreel. We help you reveal the narrative behind every reel.</p>
+                <p style="margin:20px 0 0;font-size:14px;font-weight:700;color:#4a5568;">The ${siteName} Team</p>
+              </td>
+            </tr>
+          </table>
+          <div style="max-width:600px;margin:32px auto 0;text-align:center;">
+            <p style="font-size:12px;color:#a0aec0;">&copy; ${new Date().getFullYear()} ${siteName} &middot; <a href="${siteUrl}/history" style="color:#a0aec0;text-decoration:underline;">Account Settings</a></p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
 
   const textSummary = topClaims.length
     ? topClaims.map((item, idx) => `${idx + 1}. ${verdictToLabel(item?.verdict)} - ${item?.claim || 'Claim'}`).join('\n')
     : 'No specific claims were extracted.';
 
-  const html = `
-    <div style="background:#f4f4f8;padding:28px 10px;font-family:Arial,sans-serif;">
-      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:620px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #ececf5;">
-        <tr>
-          <td style="background:${brandColor};padding:22px 24px;text-align:center;">
-            <img src="${logoUrl}" alt="${siteName} banner" style="display:block;max-width:100%;height:auto;border-radius:10px;border:0;" />
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:24px 24px 4px;color:#111827;">
-            <h2 style="margin:0 0 10px;font-size:24px;line-height:1.25;">Your analysis is ready, ${safeName}</h2>
-            <p style="margin:0 0 8px;font-size:15px;color:#374151;"><strong>${escapedTitle}</strong> (${escapedPlatform})</p>
-            <p style="margin:0 0 8px;font-size:14px;color:#4b5563;">Bias score: <strong>${biasScore ?? 'N/A'}</strong> · Level: <strong>${escapeHtml(biasLevel)}</strong> · Claims checked: <strong>${totalClaims}</strong></p>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:4px 24px 6px;">
-            <p style="margin:0 0 8px;font-size:14px;color:#111827;font-weight:700;">Top findings</p>
-            <ul style="margin:0;padding-left:18px;font-size:14px;line-height:1.6;">${claimsHtml}</ul>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:12px 24px 24px;">
-            <a href="${resultUrl}" style="display:inline-block;background:${brandColor};color:#ffffff;text-decoration:none;padding:11px 18px;border-radius:999px;font-size:14px;font-weight:700;">View Full Analysis</a>
-            <p style="margin:14px 0 0;font-size:12px;color:#9ca3af;">You can turn these emails off anytime in your account history settings.</p>
-          </td>
-        </tr>
-      </table>
-    </div>
-  `;
-
   await sendMail({
     from: fromAddr,
     to: email,
     subject: `Your ${siteName} analysis result is ready`,
-    text: `Hi ${safeName},\n\nYour analysis is ready for \"${title}\" (${platform}).\nBias score: ${biasScore ?? 'N/A'}\nBias level: ${biasLevel}\nClaims checked: ${totalClaims}\n\nTop findings:\n${textSummary}\n\nView full analysis: ${resultUrl}`,
+    text: `Your analysis is ready: ${title}\n\nBias Score: ${biasScore ?? 'N/A'}\nLevel: ${biasLevel}\nClaims Checked: ${totalClaims}\n\nTop Findings:\n${textSummary}\n\nView Full Report: ${resultUrl}`,
     html,
   });
 
