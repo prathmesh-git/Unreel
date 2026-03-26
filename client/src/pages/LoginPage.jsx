@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -9,6 +10,7 @@ export default function LoginPage() {
   const from = location.state?.from?.pathname || '/';
 
   const { login, googleLogin, isAuthenticated } = useAuth();
+  const { showToast } = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -46,7 +48,10 @@ export default function LoginPage() {
           callback: async (response) => {
             try {
               setError('');
-              await googleLogin(response.credential);
+              const result = await googleLogin(response.credential);
+              if (result?.isNewUser) {
+                showToast('Welcome to Unreel. Your account is ready.');
+              }
               navigate(from, { replace: true });
             } catch (err) {
               setError(err.message || 'Google sign-in failed.');
@@ -73,7 +78,7 @@ export default function LoginPage() {
     return () => {
       active = false;
     };
-  }, [googleLogin, navigate, from]);
+  }, [googleLogin, navigate, from, showToast]);
 
   async function onSubmit(e) {
     e.preventDefault();

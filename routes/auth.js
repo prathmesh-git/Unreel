@@ -2,11 +2,24 @@ const express = require('express');
 const { OAuth2Client } = require('google-auth-library');
 const User = require('../models/User');
 const { requireAuth, generateToken } = require('../middleware/authMiddleware');
+const { sendWelcomeEmail } = require('../modules/mailer');
 
 const router = express.Router();
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID;
 const googleClient = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null;
+
+function toSafeUser(user) {
+  return {
+    id: user._id,
+    name: user.name,
+    email: user.email,
+    avatar: user.avatar,
+    preferences: {
+      emailAnalysisResults: user?.preferences?.emailAnalysisResults !== false,
+    },
+  };
+}
 
 // ─── GET /api/auth/google-config ────────────────────────────────────────────
 router.get('/google-config', (_req, res) => {
@@ -48,11 +61,16 @@ router.post('/register', async (req, res) => {
       password,
     });
 
+    sendWelcomeEmail({ name: user.name, email: user.email }).catch((mailErr) => {
+      console.warn('[Unreel] Welcome email skipped/failed:', mailErr.message);
+    });
+
     const token = generateToken(user);
     res.status(201).json({
       success: true,
       token,
-      user: { id: user._id, name: user.name, email: user.email, avatar: user.avatar },
+      isNewUser: true,
+      user: toSafeUser(user),
     });
   } catch (err) {
     console.error('[Unreel] Register error:', err.message);
@@ -89,7 +107,8 @@ router.post('/login', async (req, res) => {
     res.json({
       success: true,
       token,
-      user: { id: user._id, name: user.name, email: user.email, avatar: user.avatar },
+      isNewUser: false,
+      user: toSafeUser(user),
     });
   } catch (err) {
     console.error('[Unreel] Login error:', err.message);
@@ -116,23 +135,47 @@ router.post('/google', async (req, res) => {
     const payload = ticket.getPayload();
     const { sub: googleId, email, name, picture } = payload;
 
+    if (!email) {
+      return res.status(400).json({ error: 'Google account email is required.' });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+
     // Find existing user by googleId or email
-    let user = await User.findOne({ $or: [{ googleId }, { email }] });
+    let user = await User.findOne({ $or: [{ googleId }, { email: normalizedEmail }] });
+    let isNewUser = false;
 
     if (user) {
       // Link Google account if not already linked
+      let userUpdated = false;
+
       if (!user.googleId) {
         user.googleId = googleId;
-        if (picture && !user.avatar) user.avatar = picture;
+        userUpdated = true;
+      }
+
+      // Keep avatar in sync so profile photos reliably appear after login.
+      if (picture && user.avatar !== picture) {
+        user.avatar = picture;
+        userUpdated = true;
+      }
+
+      if (userUpdated) {
         await user.save();
       }
     } else {
       // Create new user
       user = await User.create({
-        name: name || email.split('@')[0],
-        email,
+        name: name || normalizedEmail.split('@')[0],
+        email: normalizedEmail,
         googleId,
         avatar: picture || null,
+      });
+
+      isNewUser = true;
+
+      sendWelcomeEmail({ name: user.name, email: user.email }).catch((mailErr) => {
+        console.warn('[Unreel] Welcome email skipped/failed:', mailErr.message);
       });
     }
 
@@ -140,7 +183,8 @@ router.post('/google', async (req, res) => {
     res.json({
       success: true,
       token,
-      user: { id: user._id, name: user.name, email: user.email, avatar: user.avatar },
+      isNewUser,
+      user: toSafeUser(user),
     });
   } catch (err) {
     console.error('[Unreel] Google auth error:', err.message);
@@ -157,11 +201,39 @@ router.get('/me', requireAuth, async (req, res) => {
     }
     res.json({
       success: true,
-      user: { id: user._id, name: user.name, email: user.email, avatar: user.avatar },
+      user: toSafeUser(user),
     });
   } catch (err) {
     console.error('[Unreel] Get user error:', err.message);
     res.status(500).json({ error: 'Could not fetch user profile.' });
+  }
+});
+
+// ─── PATCH /api/auth/preferences ─────────────────────────────────────────────
+router.patch('/preferences', requireAuth, async (req, res) => {
+  const { emailAnalysisResults } = req.body;
+
+  if (typeof emailAnalysisResults !== 'boolean') {
+    return res.status(400).json({ error: 'emailAnalysisResults must be a boolean value.' });
+  }
+
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+
+    if (!user.preferences) user.preferences = {};
+    user.preferences.emailAnalysisResults = emailAnalysisResults;
+    await user.save();
+
+    res.json({
+      success: true,
+      user: toSafeUser(user),
+    });
+  } catch (err) {
+    console.error('[Unreel] Update preferences error:', err.message);
+    res.status(500).json({ error: 'Could not update preferences.' });
   }
 });
 

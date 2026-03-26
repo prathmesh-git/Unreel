@@ -8,6 +8,7 @@ export default function Navbar() {
   const location = useLocation();
   const { user, isAuthenticated, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
 
   const [theme, setTheme] = useState(localStorage.getItem('unreel_theme') || 'dark');
 
@@ -19,6 +20,10 @@ export default function Navbar() {
   useEffect(() => {
     setMobileOpen(false);
   }, [location.pathname, location.hash]);
+
+  useEffect(() => {
+    setAvatarLoadFailed(false);
+  }, [user?.avatar]);
 
   const isHistory = useMemo(() => location.pathname === '/history', [location.pathname]);
   const isAnalyzing = useMemo(() => location.pathname === '/analyze' || location.pathname.startsWith('/results'), [location.pathname]);
@@ -89,9 +94,15 @@ export default function Navbar() {
               <>
                 <Link className={`auth-nav-link ${isHistory ? 'active' : ''}`} to="/history">History</Link>
                 <span className="auth-nav-user">
-                  {user?.avatar ? (
+                  {user?.avatar && !avatarLoadFailed ? (
                     <span className="auth-nav-avatar-frame">
-                      <img src={user.avatar} alt="User avatar" className="auth-nav-avatar" />
+                      <img
+                        src={user.avatar}
+                        alt="User avatar"
+                        className="auth-nav-avatar"
+                        referrerPolicy="no-referrer"
+                        onError={() => setAvatarLoadFailed(true)}
+                      />
                     </span>
                   ) : (
                     <span className="auth-nav-avatar-frame auth-nav-avatar-fallback">

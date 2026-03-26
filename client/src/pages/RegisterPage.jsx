@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -9,6 +10,7 @@ export default function RegisterPage() {
   const from = location.state?.from?.pathname || '/';
 
   const { register, googleLogin, isAuthenticated } = useAuth();
+  const { showToast } = useToast();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -47,7 +49,10 @@ export default function RegisterPage() {
           callback: async (response) => {
             try {
               setError('');
-              await googleLogin(response.credential);
+              const result = await googleLogin(response.credential);
+              if (result?.isNewUser) {
+                showToast('Welcome to Unreel. Your account is ready.');
+              }
               navigate(from, { replace: true });
             } catch (err) {
               setError(err.message || 'Google sign-in failed.');
@@ -74,7 +79,7 @@ export default function RegisterPage() {
     return () => {
       active = false;
     };
-  }, [googleLogin, navigate, from]);
+  }, [googleLogin, navigate, from, showToast]);
 
   async function onSubmit(e) {
     e.preventDefault();
@@ -87,6 +92,7 @@ export default function RegisterPage() {
       setSubmitting(true);
       setError('');
       await register(name, email, password);
+      showToast('Welcome to Unreel. Your account is ready.');
       navigate(from, { replace: true });
     } catch (err) {
       setError(err.message || 'Registration failed.');

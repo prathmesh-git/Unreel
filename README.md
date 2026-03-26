@@ -104,7 +104,18 @@ TAVILY_API_KEY=your_tavily_api_key      # Web search (free tier available)
 MONGODB_URI=mongodb://127.0.0.1:27017/unreel
 JWT_SECRET=replace_with_a_strong_secret
 PORT=3000
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your_email_username
+SMTP_PASS=your_email_password_or_app_password
+SMTP_FROM="Unreel" <no-reply@unreeled.in>
+MAIL_BRAND_NAME=Unreel
+MAIL_BRAND_COLOR=#7c3aed
+MAIL_LOGO_URL=https://www.unreeled.in/og-image.png
 ```
+
+If SMTP variables are set, Unreel sends a standard welcome email to newly created accounts (email signup and first-time Google signup).
+Use `MAIL_BRAND_*` values to customize the email branding without touching code.
 
 ### 3. Development Mode
 

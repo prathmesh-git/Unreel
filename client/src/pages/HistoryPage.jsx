@@ -1,12 +1,17 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 
 export default function HistoryPage() {
-  const { token, isAuthenticated, loading } = useAuth();
+  const { token, user, isAuthenticated, loading, updateEmailPreferences } = useAuth();
+  const { showToast } = useToast();
   const [items, setItems] = useState([]);
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState('');
+  const [savingPref, setSavingPref] = useState(false);
+
+  const emailResultsEnabled = user?.preferences?.emailAnalysisResults !== false;
 
   useEffect(() => {
     let cancelled = false;
@@ -50,11 +55,41 @@ export default function HistoryPage() {
     return <Navigate to="/login" replace state={{ from: { pathname: '/history' } }} />;
   }
 
+  async function onToggleEmailResults(e) {
+    const nextValue = e.target.checked;
+    try {
+      setSavingPref(true);
+      await updateEmailPreferences(nextValue);
+      showToast(nextValue ? 'Analysis emails turned on.' : 'Analysis emails turned off.');
+    } catch (err) {
+      showToast(err.message || 'Could not update email setting.', { tone: 'error' });
+    } finally {
+      setSavingPref(false);
+    }
+  }
+
   return (
     <main className="history-page">
       <section className="history-wrap">
         <h1>Analysis History</h1>
         <p className="history-subtitle">Your previously saved Unreel analyses.</p>
+
+        <div className="history-setting-card">
+          <div>
+            <h2>Email Result Settings</h2>
+            <p>Send analysis result summaries to your account email after each completed analysis.</p>
+          </div>
+          <label className="email-setting-toggle" htmlFor="email-results-toggle">
+            <input
+              id="email-results-toggle"
+              type="checkbox"
+              checked={emailResultsEnabled}
+              onChange={onToggleEmailResults}
+              disabled={savingPref}
+            />
+            <span>{emailResultsEnabled ? 'On' : 'Off'}</span>
+          </label>
+        </div>
 
         {fetching && <p className="history-meta">Loading your history...</p>}
         {error && <p className="auth-error">{error}</p>}

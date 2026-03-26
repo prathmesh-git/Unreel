@@ -12,7 +12,9 @@ const { analyzeBias } = require('../modules/biasAnalyzer');
 const { extractKeyframes } = require('../modules/audioExtractor');
 const { extractOnScreenText } = require('../modules/ocrExtractor');
 const AnalysisResult = require('../models/AnalysisResult');
+const User = require('../models/User');
 const { optionalAuth } = require('../middleware/authMiddleware');
+const { sendAnalysisResultEmail } = require('../modules/mailer');
 
 const router = express.Router();
 
@@ -75,6 +77,9 @@ router.post('/url', optionalAuth, async (req, res) => {
     };
 
     const savedId = await persistResult(analysisData, 'url', req.user?._id);
+    sendAnalysisEmailIfEnabled(req.user?._id, analysisData, savedId).catch((err) => {
+      console.warn('[Unreel] Analysis email skipped/failed:', err.message);
+    });
     res.json(toApiResponse(analysisData, savedId));
   } catch (error) {
     console.error('[Unreel] Error:', error.message);
@@ -124,6 +129,9 @@ router.post('/text', optionalAuth, async (req, res) => {
       analyzedAt,
     };
     const savedId = await persistResult(analysisData, 'text', req.user?._id);
+    sendAnalysisEmailIfEnabled(req.user?._id, analysisData, savedId).catch((err) => {
+      console.warn('[Unreel] Analysis email skipped/failed:', err.message);
+    });
     res.json(toApiResponse(analysisData, savedId));
   } catch (error) {
     console.error('[Unreel] Text analysis error:', error.message);
@@ -169,6 +177,9 @@ router.post('/upload', optionalAuth, upload.single('video'), async (req, res) =>
     };
 
     const savedId = await persistResult(analysisData, 'upload', req.user?._id);
+    sendAnalysisEmailIfEnabled(req.user?._id, analysisData, savedId).catch((err) => {
+      console.warn('[Unreel] Analysis email skipped/failed:', err.message);
+    });
     res.json(toApiResponse(analysisData, savedId));
   } catch (error) {
     console.error('[Unreel] Upload error:', error.message);
@@ -288,6 +299,23 @@ async function persistResult(data, sourceType, userId = null) {
     console.error('[Unreel] Failed to save to MongoDB:', err.message);
     return null;
   }
+}
+
+async function sendAnalysisEmailIfEnabled(userId, analysisData, resultId) {
+  if (!userId) return;
+
+  const user = await User.findById(userId).select('name email preferences.emailAnalysisResults');
+  if (!user || !user.email) return;
+
+  const enabled = user?.preferences?.emailAnalysisResults !== false;
+  if (!enabled) return;
+
+  await sendAnalysisResultEmail({
+    name: user.name,
+    email: user.email,
+    analysisData,
+    resultId,
+  });
 }
 
 module.exports = router;

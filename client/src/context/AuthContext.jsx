@@ -63,7 +63,7 @@ export function AuthProvider({ children }) {
     const data = await res.json();
     if (!res.ok || !data.success) throw new Error(data.error || 'Login failed.');
     storeSession(data.token, data.user);
-    return data.user;
+    return { user: data.user, isNewUser: Boolean(data.isNewUser) };
   }
 
   async function register(name, email, password) {
@@ -75,7 +75,7 @@ export function AuthProvider({ children }) {
     const data = await res.json();
     if (!res.ok || !data.success) throw new Error(data.error || 'Registration failed.');
     storeSession(data.token, data.user);
-    return data.user;
+    return { user: data.user, isNewUser: Boolean(data.isNewUser) };
   }
 
   async function googleLogin(credential) {
@@ -87,6 +87,27 @@ export function AuthProvider({ children }) {
     const data = await res.json();
     if (!res.ok || !data.success) throw new Error(data.error || 'Google login failed.');
     storeSession(data.token, data.user);
+    return { user: data.user, isNewUser: Boolean(data.isNewUser) };
+  }
+
+  async function updateEmailPreferences(emailAnalysisResults) {
+    if (!token) throw new Error('You must be logged in.');
+
+    const res = await fetch('/api/auth/preferences', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ emailAnalysisResults }),
+    });
+
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.error || 'Could not update preferences.');
+    }
+
+    setUser(data.user);
     return data.user;
   }
 
@@ -105,6 +126,7 @@ export function AuthProvider({ children }) {
       login,
       register,
       googleLogin,
+      updateEmailPreferences,
       logout,
     }),
     [token, user, loading]
