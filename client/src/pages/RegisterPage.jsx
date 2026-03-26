@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { apiUrl } from '../lib/api';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -23,7 +24,7 @@ export default function RegisterPage() {
 
     async function initGoogleSignIn() {
       try {
-        const configRes = await fetch('/api/auth/google-config');
+        const configRes = await fetch(apiUrl('/api/auth/google-config'));
         if (!configRes.ok) {
           throw new Error('Could not load Google sign-in configuration.');
         }

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { apiUrl } from '../lib/api';
 
 export default function HistoryPage() {
   const { token, user, isAuthenticated, loading, updateEmailPreferences } = useAuth();
@@ -26,7 +27,7 @@ export default function HistoryPage() {
         setFetching(true);
         setError('');
 
-        const res = await fetch('/api/history?limit=30&page=1', {
+        const res = await fetch(apiUrl('/api/history?limit=30&page=1'), {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();

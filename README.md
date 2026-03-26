@@ -104,6 +104,7 @@ TAVILY_API_KEY=your_tavily_api_key      # Web search (free tier available)
 MONGODB_URI=mongodb://127.0.0.1:27017/unreel
 JWT_SECRET=replace_with_a_strong_secret
 PORT=3000
+VITE_API_BASE_URL=                    # optional, set when frontend and backend are on different domains
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=your_email_username

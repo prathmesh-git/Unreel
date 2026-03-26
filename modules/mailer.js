@@ -57,6 +57,33 @@ function resolveFrom(siteName) {
   return `"${siteName}" <${process.env.SMTP_USER}>`;
 }
 
+function buildSenderOptions(siteName) {
+  const smtpUser = process.env.SMTP_USER;
+  const desiredFrom = resolveFrom(siteName);
+  const useCustomFrom = Boolean(process.env.SMTP_FROM || process.env.MAIL_FROM);
+
+  // For many SMTP providers, envelope/sender must align with authenticated user.
+  if (useCustomFrom && smtpUser) {
+    return {
+      from: desiredFrom,
+      sender: smtpUser,
+      replyTo: desiredFrom,
+      envelope: {
+        from: smtpUser,
+      },
+    };
+  }
+
+  return {
+    from: desiredFrom,
+    envelope: smtpUser
+      ? {
+        from: smtpUser,
+      }
+      : undefined,
+  };
+}
+
 function serializeMailError(err) {
   if (!err) return { message: 'Unknown mail error' };
   return {
@@ -121,7 +148,7 @@ async function sendWelcomeEmail({ name, email }) {
   const siteUrl = (process.env.SITE_URL || 'https://www.unreeled.in').replace(/\/$/, '');
   const brandColor = process.env.MAIL_BRAND_COLOR || '#7c3aed';
   const logoUrl = process.env.MAIL_LOGO_URL || `${siteUrl}/og-image.png`;
-  const from = resolveFrom(siteName);
+  const senderOptions = buildSenderOptions(siteName);
   const safeName = escapeHtml((name || 'there').trim());
 
   const ctaUrl = siteUrl;
@@ -156,7 +183,7 @@ async function sendWelcomeEmail({ name, email }) {
   `;
 
   await mailer.sendMail({
-    from,
+    ...senderOptions,
     to: email,
     subject: `Welcome to ${siteName}`,
     text: `Hi ${safeName},\n\nWelcome to ${siteName}. Your account is ready, and you can now analyze videos, save history, and continue where you left off.\n\nIf you did not create this account, please ignore this email.\n\n- The ${siteName} Team`,
@@ -183,7 +210,7 @@ async function sendAnalysisResultEmail({ name, email, analysisData, resultId }) 
   const siteUrl = (process.env.SITE_URL || 'https://www.unreeled.in').replace(/\/$/, '');
   const brandColor = process.env.MAIL_BRAND_COLOR || '#7c3aed';
   const logoUrl = process.env.MAIL_LOGO_URL || `${siteUrl}/og-image.png`;
-  const from = resolveFrom(siteName);
+  const senderOptions = buildSenderOptions(siteName);
 
   const safeName = escapeHtml((name || 'there').trim());
   const title = analysisData?.videoInfo?.title || 'Video';
@@ -242,7 +269,7 @@ async function sendAnalysisResultEmail({ name, email, analysisData, resultId }) 
   `;
 
   await mailer.sendMail({
-    from,
+    ...senderOptions,
     to: email,
     subject: `Your ${siteName} analysis result is ready`,
     text: `Hi ${safeName},\n\nYour analysis is ready for \"${title}\" (${platform}).\nBias score: ${biasScore ?? 'N/A'}\nBias level: ${biasLevel}\nClaims checked: ${totalClaims}\n\nTop findings:\n${textSummary}\n\nView full analysis: ${resultUrl}`,

@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { apiUrl } from '../lib/api';
 
 const AuthContext = createContext(null);
 const TOKEN_KEY = 'unreel_auth_token';
@@ -19,7 +20,7 @@ export function AuthProvider({ children }) {
       }
 
       try {
-        const res = await fetch('/api/auth/me', {
+        const res = await fetch(apiUrl('/api/auth/me'), {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
@@ -55,7 +56,7 @@ export function AuthProvider({ children }) {
   }
 
   async function login(email, password) {
-    const res = await fetch('/api/auth/login', {
+    const res = await fetch(apiUrl('/api/auth/login'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
@@ -67,7 +68,7 @@ export function AuthProvider({ children }) {
   }
 
   async function register(name, email, password) {
-    const res = await fetch('/api/auth/register', {
+    const res = await fetch(apiUrl('/api/auth/register'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, email, password }),
@@ -79,7 +80,7 @@ export function AuthProvider({ children }) {
   }
 
   async function googleLogin(credential) {
-    const res = await fetch('/api/auth/google', {
+    const res = await fetch(apiUrl('/api/auth/google'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ credential }),
@@ -93,7 +94,7 @@ export function AuthProvider({ children }) {
   async function updateEmailPreferences(emailAnalysisResults) {
     if (!token) throw new Error('You must be logged in.');
 
-    const res = await fetch('/api/auth/preferences', {
+    const res = await fetch(apiUrl('/api/auth/preferences'), {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',

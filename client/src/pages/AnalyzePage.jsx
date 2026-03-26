@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { AlertCircle, Upload, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { apiUrl } from '../lib/api';
 
 const LOADING_STEPS_URL = [
   { id: 'download',   label: 'Downloading video' },
@@ -73,7 +74,7 @@ export default function AnalyzePage() {
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
         if (params.type === 'url') {
-          res = await fetch('/api/analyze/url', {
+          res = await fetch(apiUrl('/api/analyze/url'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', ...headers },
             body: JSON.stringify({ url: params.url }),
@@ -81,13 +82,13 @@ export default function AnalyzePage() {
         } else if (params.type === 'upload') {
           const form = new FormData();
           form.append('video', params.file);
-          res = await fetch('/api/analyze/upload', {
+          res = await fetch(apiUrl('/api/analyze/upload'), {
             method: 'POST',
             headers,
             body: form,
           });
         } else if (params.type === 'text') {
-          res = await fetch('/api/analyze/text', {
+          res = await fetch(apiUrl('/api/analyze/text'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', ...headers },
             body: JSON.stringify({ text: params.text }),
