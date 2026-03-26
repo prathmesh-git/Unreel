@@ -35,6 +35,9 @@ function getTransporter() {
     secure,
     requireTLS,
     ignoreTLS,
+    // Force IPv4 – many cloud hosts (Render, Railway) lack IPv6 outbound,
+    // and Node.js prefers AAAA records, causing ENETUNREACH on smtp.gmail.com.
+    family: 4,
     connectionTimeout: Number(process.env.SMTP_CONNECTION_TIMEOUT_MS || 15000),
     greetingTimeout: Number(process.env.SMTP_GREETING_TIMEOUT_MS || 15000),
     socketTimeout: Number(process.env.SMTP_SOCKET_TIMEOUT_MS || 20000),
