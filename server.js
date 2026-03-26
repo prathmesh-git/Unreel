@@ -5,7 +5,7 @@ const mongoose = require('mongoose');
 const path = require('path');
 const fs = require('fs');
 const { getDownloaderDiagnostics } = require('./modules/downloader');
-const { getMailDiagnostics } = require('./modules/mailer');
+const { getMailDiagnostics, verifyMailTransport } = require('./modules/mailer');
 
 const analyzeRoutes = require('./routes/analyze');
 const resultsRoutes = require('./routes/results');
@@ -72,6 +72,17 @@ app.get('/api/health/downloader', (_req, res) => {
   res.json({
     status: 'ok',
     downloader: getDownloaderDiagnostics(),
+  });
+});
+
+app.get('/api/health/mail', async (_req, res) => {
+  const diagnostics = getMailDiagnostics();
+  const verify = await verifyMailTransport();
+
+  res.status(verify.ok ? 200 : 500).json({
+    status: verify.ok ? 'ok' : 'error',
+    mail: diagnostics,
+    verify,
   });
 });
 

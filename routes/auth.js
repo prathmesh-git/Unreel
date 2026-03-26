@@ -2,7 +2,7 @@ const express = require('express');
 const { OAuth2Client } = require('google-auth-library');
 const User = require('../models/User');
 const { requireAuth, generateToken } = require('../middleware/authMiddleware');
-const { sendWelcomeEmail } = require('../modules/mailer');
+const { sendWelcomeEmail, serializeMailError } = require('../modules/mailer');
 
 const router = express.Router();
 
@@ -62,7 +62,7 @@ router.post('/register', async (req, res) => {
     });
 
     sendWelcomeEmail({ name: user.name, email: user.email }).catch((mailErr) => {
-      console.warn('[Unreel] Welcome email skipped/failed:', mailErr.message);
+      console.warn('[Unreel] Welcome email skipped/failed:', serializeMailError(mailErr));
     });
 
     const token = generateToken(user);
@@ -175,7 +175,7 @@ router.post('/google', async (req, res) => {
       isNewUser = true;
 
       sendWelcomeEmail({ name: user.name, email: user.email }).catch((mailErr) => {
-        console.warn('[Unreel] Welcome email skipped/failed:', mailErr.message);
+        console.warn('[Unreel] Welcome email skipped/failed:', serializeMailError(mailErr));
       });
     }
 

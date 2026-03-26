@@ -1,6 +1,7 @@
 const nodemailer = require('nodemailer');
 
 let transporter;
+let transporterConfig;
 
 function escapeHtml(input) {
   return String(input)
@@ -18,23 +19,58 @@ function getTransporter() {
   const port = Number(process.env.SMTP_PORT || 587);
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
+  const secure = String(process.env.SMTP_SECURE || '').toLowerCase() === 'true' || port === 465;
+  const requireTLS = String(process.env.SMTP_REQUIRE_TLS || '').toLowerCase() === 'true';
+  const ignoreTLS = String(process.env.SMTP_IGNORE_TLS || '').toLowerCase() === 'true';
+  const rejectUnauthorized = String(process.env.SMTP_TLS_REJECT_UNAUTHORIZED || '').toLowerCase() !== 'false';
 
   if (!host || !user || !pass) {
     return null;
   }
 
-  transporter = nodemailer.createTransport({
+  transporterConfig = {
     host,
     port,
-    secure: port === 465,
+    secure,
+    requireTLS,
+    ignoreTLS,
+    connectionTimeout: Number(process.env.SMTP_CONNECTION_TIMEOUT_MS || 15000),
+    greetingTimeout: Number(process.env.SMTP_GREETING_TIMEOUT_MS || 15000),
+    socketTimeout: Number(process.env.SMTP_SOCKET_TIMEOUT_MS || 20000),
     auth: { user, pass },
-  });
+    tls: {
+      // Keep strict TLS by default; allow override for legacy SMTP providers.
+      rejectUnauthorized,
+    },
+  };
+
+  transporter = nodemailer.createTransport(transporterConfig);
 
   return transporter;
 }
 
+function resolveFrom(siteName) {
+  if (process.env.SMTP_FROM) return process.env.SMTP_FROM;
+  if (process.env.MAIL_FROM) return process.env.MAIL_FROM;
+
+  // Many providers reject unauthenticated sender domains in production.
+  return `"${siteName}" <${process.env.SMTP_USER}>`;
+}
+
+function serializeMailError(err) {
+  if (!err) return { message: 'Unknown mail error' };
+  return {
+    message: err.message,
+    code: err.code || null,
+    command: err.command || null,
+    responseCode: err.responseCode || null,
+    response: err.response || null,
+  };
+}
+
 function getMailDiagnostics() {
   const port = Number(process.env.SMTP_PORT || 587);
+  const secure = String(process.env.SMTP_SECURE || '').toLowerCase() === 'true' || port === 465;
   return {
     configured: Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS),
     hostConfigured: Boolean(process.env.SMTP_HOST),
@@ -42,8 +78,37 @@ function getMailDiagnostics() {
     userConfigured: Boolean(process.env.SMTP_USER),
     passConfigured: Boolean(process.env.SMTP_PASS),
     fromConfigured: Boolean(process.env.SMTP_FROM || process.env.MAIL_FROM),
-    secure: port === 465,
+    secure,
+    requireTLS: String(process.env.SMTP_REQUIRE_TLS || '').toLowerCase() === 'true',
+    ignoreTLS: String(process.env.SMTP_IGNORE_TLS || '').toLowerCase() === 'true',
+    tlsRejectUnauthorized: String(process.env.SMTP_TLS_REJECT_UNAUTHORIZED || '').toLowerCase() !== 'false',
+    usingCustomFrom: Boolean(process.env.SMTP_FROM || process.env.MAIL_FROM),
   };
+}
+
+async function verifyMailTransport() {
+  const mailer = getTransporter();
+  if (!mailer) {
+    return { ok: false, reason: 'SMTP is not configured.' };
+  }
+
+  try {
+    await mailer.verify();
+    return {
+      ok: true,
+      config: {
+        host: transporterConfig?.host,
+        port: transporterConfig?.port,
+        secure: transporterConfig?.secure,
+      },
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      reason: 'SMTP verify failed.',
+      error: serializeMailError(err),
+    };
+  }
 }
 
 async function sendWelcomeEmail({ name, email }) {
@@ -56,7 +121,7 @@ async function sendWelcomeEmail({ name, email }) {
   const siteUrl = (process.env.SITE_URL || 'https://www.unreeled.in').replace(/\/$/, '');
   const brandColor = process.env.MAIL_BRAND_COLOR || '#7c3aed';
   const logoUrl = process.env.MAIL_LOGO_URL || `${siteUrl}/og-image.png`;
-  const from = process.env.SMTP_FROM || process.env.MAIL_FROM || `"${siteName}" <${process.env.SMTP_USER}>`;
+  const from = resolveFrom(siteName);
   const safeName = escapeHtml((name || 'there').trim());
 
   const ctaUrl = siteUrl;
@@ -118,7 +183,7 @@ async function sendAnalysisResultEmail({ name, email, analysisData, resultId }) 
   const siteUrl = (process.env.SITE_URL || 'https://www.unreeled.in').replace(/\/$/, '');
   const brandColor = process.env.MAIL_BRAND_COLOR || '#7c3aed';
   const logoUrl = process.env.MAIL_LOGO_URL || `${siteUrl}/og-image.png`;
-  const from = process.env.SMTP_FROM || process.env.MAIL_FROM || `"${siteName}" <${process.env.SMTP_USER}>`;
+  const from = resolveFrom(siteName);
 
   const safeName = escapeHtml((name || 'there').trim());
   const title = analysisData?.videoInfo?.title || 'Video';
@@ -191,4 +256,6 @@ module.exports = {
   sendWelcomeEmail,
   sendAnalysisResultEmail,
   getMailDiagnostics,
+  verifyMailTransport,
+  serializeMailError,
 };

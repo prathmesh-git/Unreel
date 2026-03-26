@@ -14,7 +14,7 @@ const { extractOnScreenText } = require('../modules/ocrExtractor');
 const AnalysisResult = require('../models/AnalysisResult');
 const User = require('../models/User');
 const { optionalAuth } = require('../middleware/authMiddleware');
-const { sendAnalysisResultEmail } = require('../modules/mailer');
+const { sendAnalysisResultEmail, serializeMailError } = require('../modules/mailer');
 
 const router = express.Router();
 
@@ -78,7 +78,7 @@ router.post('/url', optionalAuth, async (req, res) => {
 
     const savedId = await persistResult(analysisData, 'url', req.user?._id);
     sendAnalysisEmailIfEnabled(req.user?._id, analysisData, savedId).catch((err) => {
-      console.warn('[Unreel] Analysis email skipped/failed:', err.message);
+      console.warn('[Unreel] Analysis email skipped/failed:', serializeMailError(err));
     });
     res.json(toApiResponse(analysisData, savedId));
   } catch (error) {
@@ -130,7 +130,7 @@ router.post('/text', optionalAuth, async (req, res) => {
     };
     const savedId = await persistResult(analysisData, 'text', req.user?._id);
     sendAnalysisEmailIfEnabled(req.user?._id, analysisData, savedId).catch((err) => {
-      console.warn('[Unreel] Analysis email skipped/failed:', err.message);
+      console.warn('[Unreel] Analysis email skipped/failed:', serializeMailError(err));
     });
     res.json(toApiResponse(analysisData, savedId));
   } catch (error) {
@@ -178,7 +178,7 @@ router.post('/upload', optionalAuth, upload.single('video'), async (req, res) =>
 
     const savedId = await persistResult(analysisData, 'upload', req.user?._id);
     sendAnalysisEmailIfEnabled(req.user?._id, analysisData, savedId).catch((err) => {
-      console.warn('[Unreel] Analysis email skipped/failed:', err.message);
+      console.warn('[Unreel] Analysis email skipped/failed:', serializeMailError(err));
     });
     res.json(toApiResponse(analysisData, savedId));
   } catch (error) {
