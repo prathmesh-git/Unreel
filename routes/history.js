@@ -67,4 +67,47 @@ router.get('/', requireAuth, async (req, res) => {
   }
 });
 
+// ─── DELETE /api/history/:id ─────────────────────────────────────────────────
+router.delete('/:id', requireAuth, async (req, res) => {
+  if (mongoose.connection.readyState !== 1) {
+    return res.status(503).json({ error: 'Database is not connected.' });
+  }
+
+  const { id } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({ error: 'Invalid history item id.' });
+  }
+
+  try {
+    const deleted = await AnalysisResult.findOneAndDelete({
+      _id: id,
+      userId: req.user._id,
+    });
+
+    if (!deleted) {
+      return res.status(404).json({ error: 'History item not found.' });
+    }
+
+    return res.json({ success: true, deletedId: id });
+  } catch (err) {
+    console.error('[Unreel] History delete error:', err.message);
+    return res.status(500).json({ error: 'Could not delete history item.' });
+  }
+});
+
+// ─── DELETE /api/history ─────────────────────────────────────────────────────
+router.delete('/', requireAuth, async (req, res) => {
+  if (mongoose.connection.readyState !== 1) {
+    return res.status(503).json({ error: 'Database is not connected.' });
+  }
+
+  try {
+    const result = await AnalysisResult.deleteMany({ userId: req.user._id });
+    return res.json({ success: true, deletedCount: result.deletedCount || 0 });
+  } catch (err) {
+    console.error('[Unreel] History clear-all error:', err.message);
+    return res.status(500).json({ error: 'Could not clear history.' });
+  }
+});
+
 module.exports = router;

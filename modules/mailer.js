@@ -192,6 +192,7 @@ async function sendWelcomeEmail({ name, email }) {
   const brandColor = process.env.MAIL_BRAND_COLOR || '#7c3aed';
   const logoUrl = process.env.MAIL_LOGO_URL || `${siteUrl}/og-image.png`;
   const safeName = escapeHtml((name || 'there').trim());
+  const plainName = (name || 'there').trim();
   const fromAddr = resolveFrom(siteName);
   const ctaUrl = siteUrl;
 
@@ -203,60 +204,69 @@ async function sendWelcomeEmail({ name, email }) {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Welcome to ${siteName}</title>
       </head>
-      <body style="margin:0;padding:0;background-color:#f4f7fa;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-        <div style="background-color:#f4f7fa;padding:40px 20px;">
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;margin:0 auto;background-color:#ffffff;border-radius:24px;overflow:hidden;box-shadow:0 12px 30px rgba(0,0,0,0.06);border:1px solid #e5e9f0;">
-            <!-- Top Accent Bar -->
-            <tr><td style="height:6px;background-color:${brandColor};"></td></tr>
-            
-            <!-- White Modern Header -->
+      <body style="margin:0;padding:0;background:#eef2f7;font-family:'Segoe UI',Inter,Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
+        <div style="padding:30px 16px;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:640px;margin:0 auto;border-collapse:separate;border-spacing:0;background:#ffffff;border:1px solid #dbe3ee;border-radius:18px;overflow:hidden;box-shadow:0 14px 40px rgba(15,23,42,0.08);">
             <tr>
-              <td style="padding:48px 40px 32px;text-align:center;">
-                <img src="${logoUrl}" alt="${siteName}" style="display:inline-block;max-width:140px;height:auto;border-radius:12px;" />
-                <p style="margin:16px 0 0;font-size:12px;font-weight:700;color:${brandColor};text-transform:uppercase;letter-spacing:0.1em;">Reveal the truth behind every reel</p>
+              <td style="padding:28px 34px 20px;border-bottom:1px solid #e6edf6;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
+                  <tr>
+                    <td style="vertical-align:middle;">
+                      <img src="${logoUrl}" alt="${siteName}" style="display:block;max-width:118px;height:auto;" />
+                    </td>
+                    <td style="vertical-align:middle;text-align:right;">
+                      <span style="display:inline-block;padding:6px 10px;border-radius:999px;background:rgba(13,110,253,0.08);color:${brandColor};font-size:11px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;">Welcome</span>
+                    </td>
+                  </tr>
+                </table>
               </td>
             </tr>
 
             <tr>
-              <td style="padding:0 48px 48px;">
-                <h1 style="margin:0 0 16px;font-size:32px;font-weight:800;line-height:1.2;color:#1a202c;letter-spacing:-0.03em;">Welcome to the fold, ${safeName}</h1>
-                <p style="margin:0 0 32px;font-size:17px;line-height:1.7;color:#4a5568;">Your account is ready. We're here to help you navigate through viral misinformation with precision and clarity.</p>
-                
-                <div style="background-color:#f8faff;border-radius:20px;padding:32px;margin-bottom:40px;border:1px solid #edf2f7;">
-                  <h2 style="margin:0 0 20px;font-size:14px;font-weight:800;color:${brandColor};text-transform:uppercase;letter-spacing:0.06em;">Getting Started</h2>
-                  <div style="margin-bottom:16px;">
-                    <p style="margin:0;font-size:16px;font-weight:700;color:#2d3748;">🎬 Paste any URL</p>
-                    <p style="margin:4px 0 0 28px;font-size:14px;color:#718096;">Analyze YouTube Shorts, Instagram Reels, or TikToks in seconds.</p>
-                  </div>
-                  <div style="margin-bottom:16px;">
-                    <p style="margin:0;font-size:16px;font-weight:700;color:#2d3748;">⚖️ Check for Bias</p>
-                    <p style="margin:4px 0 0 28px;font-size:14px;color:#718096;">Get objective scores on narrative sentiment and political leaning.</p>
-                  </div>
-                  <div>
-                    <p style="margin:0;font-size:16px;font-weight:700;color:#2d3748;">✅ Verify Claims</p>
-                    <p style="margin:4px 0 0 28px;font-size:14px;color:#718096;">Real-time fact-checking powered by advanced AI modules.</p>
-                  </div>
-                </div>
-
-                <div style="text-align:center;">
-                  <a href="${ctaUrl}" style="display:inline-block;background-color:${brandColor};color:#ffffff;text-decoration:none;padding:18px 48px;border-radius:16px;font-size:16px;font-weight:800;box-shadow:0 8px 20px -4px rgba(124,58,237,0.4);">Launch Dashboard</a>
-                </div>
+              <td style="padding:30px 34px 14px;">
+                <h1 style="margin:0 0 12px;font-size:30px;line-height:1.2;letter-spacing:-0.02em;font-weight:800;color:#111827;">Welcome to ${siteName}, ${safeName}</h1>
+                <p style="margin:0;font-size:15px;line-height:1.7;color:#475569;">Your account is active and ready. ${siteName} helps you evaluate fast-moving video claims with transparent analysis so you can separate facts from noise.</p>
               </td>
             </tr>
 
             <tr>
-              <td style="padding:0 48px 48px;text-align:center;">
-                <hr style="border:0;border-top:1px solid #edf2f7;margin:0 0 32px;">
-                <p style="margin:0;font-size:13px;color:#a0aec0;line-height:1.6;">Build your personal history of truth with Unreel.</p>
-                <div style="margin:20px 0 0;">
-                  <span style="font-size:14px;font-weight:700;color:#4a5568;">The ${siteName} Team</span>
-                </div>
+              <td style="padding:10px 34px 4px;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:separate;border-spacing:0 10px;">
+                  <tr>
+                    <td style="padding:14px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;">
+                      <p style="margin:0 0 4px;font-size:13px;font-weight:700;color:#0f172a;">Analyze short-form videos quickly</p>
+                      <p style="margin:0;font-size:13px;line-height:1.6;color:#64748b;">Paste a public URL to assess bias signals and claim credibility in one report.</p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:14px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;">
+                      <p style="margin:0 0 4px;font-size:13px;font-weight:700;color:#0f172a;">Track your analysis history</p>
+                      <p style="margin:0;font-size:13px;line-height:1.6;color:#64748b;">Revisit previous checks, compare narratives over time, and keep an evidence trail.</p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:14px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;">
+                      <p style="margin:0 0 4px;font-size:13px;font-weight:700;color:#0f172a;">Get concise summaries by email</p>
+                      <p style="margin:0;font-size:13px;line-height:1.6;color:#64748b;">Enable result emails in account settings to receive analysis updates automatically.</p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:24px 34px 34px;">
+                <a href="${ctaUrl}" style="display:inline-block;background:${brandColor};color:#ffffff;text-decoration:none;padding:13px 24px;border-radius:10px;font-size:14px;font-weight:700;letter-spacing:0.01em;">Open ${siteName}</a>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:18px 34px;background:#f8fafc;border-top:1px solid #e2e8f0;">
+                <p style="margin:0 0 4px;font-size:12px;line-height:1.5;color:#64748b;">Need help getting started? Reply to this email and our team will assist you.</p>
+                <p style="margin:0;font-size:12px;color:#94a3b8;">&copy; ${new Date().getFullYear()} ${siteName} &middot; <a href="${siteUrl}/privacy" style="color:#64748b;text-decoration:underline;">Privacy</a></p>
               </td>
             </tr>
           </table>
-          <div style="max-width:600px;margin:32px auto 0;text-align:center;">
-            <p style="font-size:12px;color:#a0aec0;">&copy; ${new Date().getFullYear()} ${siteName} &middot; <a href="${siteUrl}/privacy" style="color:#a0aec0;text-decoration:underline;">Privacy Policy</a></p>
-          </div>
         </div>
       </body>
     </html>
@@ -266,7 +276,7 @@ async function sendWelcomeEmail({ name, email }) {
     from: fromAddr,
     to: email,
     subject: `Welcome to ${siteName}`,
-    text: `Welcome to ${siteName}, ${safeName}!\n\nYour account is live and ready to use. You can now analyze viral videos, track fact-checks, and build your history of truth.\n\nGet started here: ${ctaUrl}\n\n- The ${siteName} Team`,
+    text: `Welcome to ${siteName}, ${plainName}!\n\nYour account is now active. You can start analyzing short-form videos, reviewing claim checks, and tracking your history from one dashboard.\n\nOpen your dashboard: ${ctaUrl}\n\nNeed support? Reply to this email and we will help.\n\n- The ${siteName} Team`,
     html,
   });
 
@@ -319,13 +329,13 @@ async function sendAnalysisResultEmail({ name, email, analysisData, resultId }) 
       const color = verdictColorMap[verdict] || '#6b7280';
       const claim = escapeHtml(item?.claim || 'Claim');
       return `
-        <div style="margin-bottom:16px;padding:16px;border-radius:12px;background-color:#f9fafb;border-left:4px solid ${color};">
-          <div style="display:inline-block;padding:2px 8px;border-radius:9999px;background-color:${color};color:#ffffff;font-size:10px;font-weight:800;text-transform:uppercase;margin-bottom:8px;">${label}</div>
-          <p style="margin:0;font-size:14px;line-height:1.5;color:#1f2937;">${claim}</p>
+        <div style="margin-bottom:10px;padding:13px;border-radius:10px;background:#f8fafc;border:1px solid #e2e8f0;">
+          <div style="display:inline-block;padding:2px 8px;border-radius:999px;background-color:${color};color:#ffffff;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">${label}</div>
+          <p style="margin:0;font-size:13px;line-height:1.55;color:#1f2937;">${claim}</p>
         </div>
       `;
     }).join('')
-    : '<p style="margin:0;color:#6b7280;font-style:italic;">No specific claims were extracted.</p>';
+    : '<p style="margin:0;color:#64748b;font-size:13px;font-style:italic;">No specific claims were extracted from this content.</p>';
 
   const html = `
     <!DOCTYPE html>
@@ -335,71 +345,69 @@ async function sendAnalysisResultEmail({ name, email, analysisData, resultId }) 
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Analysis Ready - ${siteName}</title>
       </head>
-      <body style="margin:0;padding:0;background-color:#f4f7fa;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-        <div style="background-color:#f4f7fa;padding:40px 20px;">
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;margin:0 auto;background-color:#ffffff;border-radius:24px;overflow:hidden;box-shadow:0 12px 30px rgba(0,0,0,0.06);border:1px solid #e5e9f0;">
-            <!-- Top Accent Bar -->
-            <tr><td style="height:6px;background-color:${brandColor};"></td></tr>
-
-            <!-- White Modern Header -->
+      <body style="margin:0;padding:0;background:#eef2f7;font-family:'Segoe UI',Inter,Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
+        <div style="padding:30px 16px;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:640px;margin:0 auto;border-collapse:separate;border-spacing:0;background:#ffffff;border:1px solid #dbe3ee;border-radius:18px;overflow:hidden;box-shadow:0 14px 40px rgba(15,23,42,0.08);">
             <tr>
-              <td style="padding:40px 40px 24px;text-align:center;">
-                <img src="${logoUrl}" alt="${siteName}" style="display:inline-block;max-width:110px;height:auto;border-radius:8px;" />
+              <td style="padding:24px 30px;border-bottom:1px solid #e6edf6;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                  <tr>
+                    <td style="vertical-align:middle;"><img src="${logoUrl}" alt="${siteName}" style="display:block;max-width:104px;height:auto;" /></td>
+                    <td style="text-align:right;vertical-align:middle;"><span style="display:inline-block;padding:6px 10px;border-radius:999px;background:rgba(13,110,253,0.08);color:${brandColor};font-size:11px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;">Analysis Ready</span></td>
+                  </tr>
+                </table>
               </td>
             </tr>
 
             <tr>
-              <td style="padding:0 48px 48px;">
-                <div style="text-align:center;margin-bottom:32px;">
-                  <p style="margin:0 0 8px;font-size:13px;font-weight:800;color:${brandColor};text-transform:uppercase;letter-spacing:0.1em;">Analysis Report</p>
-                  <h1 style="margin:0;font-size:26px;font-weight:800;line-height:1.3;color:#1a202c;letter-spacing:-0.03em;">${escapedTitle}</h1>
-                </div>
-                
-                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:40px;">
+              <td style="padding:26px 30px 16px;">
+                <p style="margin:0 0 6px;font-size:13px;color:#64748b;">Hi ${safeName},</p>
+                <h1 style="margin:0 0 12px;font-size:27px;line-height:1.25;letter-spacing:-0.02em;font-weight:800;color:#111827;">Your analysis report is ready</h1>
+                <p style="margin:0;font-size:14px;line-height:1.7;color:#475569;">We completed the review for <strong style="color:#0f172a;">${escapedTitle}</strong> on ${escapedPlatform}. Here is a quick summary.</p>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:0 30px 8px;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:separate;border-spacing:8px 0;">
                   <tr>
-                    <td style="width:33.33%;padding-right:12px;">
-                      <div style="background-color:#f8f9ff;padding:16px 8px;border-radius:16px;text-align:center;border:1px solid #edf2f7;">
-                        <p style="margin:0;font-size:10px;font-weight:800;color:#718096;text-transform:uppercase;letter-spacing:0.05em;">Bias Score</p>
-                        <p style="margin:6px 0 0;font-size:24px;font-weight:900;color:#1a202c;">${biasScore ?? 'N/A'}</p>
-                      </div>
+                    <td style="width:33.33%;padding:14px 10px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;text-align:center;">
+                      <p style="margin:0;font-size:10px;color:#64748b;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">Bias Score</p>
+                      <p style="margin:7px 0 0;font-size:22px;font-weight:800;color:#0f172a;">${biasScore ?? 'N/A'}</p>
                     </td>
-                    <td style="width:33.33%;padding:0 6px;">
-                      <div style="background-color:#f8f9ff;padding:16px 8px;border-radius:16px;text-align:center;border:1px solid #edf2f7;">
-                        <p style="margin:0;font-size:10px;font-weight:800;color:#718096;text-transform:uppercase;letter-spacing:0.05em;">Level</p>
-                        <p style="margin:6px 0 0;font-size:16px;font-weight:800;color:#1a202c;white-space:nowrap;">${escapeHtml(biasLevel)}</p>
-                      </div>
+                    <td style="width:33.33%;padding:14px 10px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;text-align:center;">
+                      <p style="margin:0;font-size:10px;color:#64748b;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">Bias Level</p>
+                      <p style="margin:7px 0 0;font-size:14px;font-weight:800;color:#0f172a;">${escapeHtml(biasLevel)}</p>
                     </td>
-                    <td style="width:33.33%;padding-left:12px;">
-                      <div style="background-color:#f8f9ff;padding:16px 8px;border-radius:16px;text-align:center;border:1px solid #edf2f7;">
-                        <p style="margin:0;font-size:10px;font-weight:800;color:#718096;text-transform:uppercase;letter-spacing:0.05em;">Claims</p>
-                        <p style="margin:6px 0 0;font-size:24px;font-weight:900;color:#1a202c;">${totalClaims}</p>
-                      </div>
+                    <td style="width:33.33%;padding:14px 10px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;text-align:center;">
+                      <p style="margin:0;font-size:10px;color:#64748b;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">Claims</p>
+                      <p style="margin:7px 0 0;font-size:22px;font-weight:800;color:#0f172a;">${totalClaims}</p>
                     </td>
                   </tr>
                 </table>
-
-                <h2 style="margin:0 0 20px;font-size:15px;font-weight:800;color:#2d3748;text-transform:uppercase;letter-spacing:0.05em;">Key Findings</h2>
-                <div style="margin-bottom:40px;">
-                  ${claimsHtml}
-                </div>
-
-                <div style="text-align:center;margin-bottom:12px;">
-                  <a href="${resultUrl}" style="display:inline-block;background-color:${brandColor};color:#ffffff;text-decoration:none;padding:18px 44px;border-radius:16px;font-size:16px;font-weight:800;box-shadow:0 8px 20px -4px rgba(124,58,237,0.4);">View Full Assessment</a>
-                </div>
               </td>
             </tr>
 
             <tr>
-              <td style="padding:0 48px 48px;text-align:center;">
-                <hr style="border:0;border-top:1px solid #edf2f7;margin:0 0 32px;">
-                <p style="margin:0;font-size:12px;color:#a0aec0;line-height:1.7;">You received this because you requested a fact-check on Unreel. We help you reveal the narrative behind every reel.</p>
-                <p style="margin:20px 0 0;font-size:14px;font-weight:700;color:#4a5568;">The ${siteName} Team</p>
+              <td style="padding:20px 30px 4px;">
+                <p style="margin:0 0 10px;font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;">Top Findings</p>
+                ${claimsHtml}
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:20px 30px 30px;">
+                <a href="${resultUrl}" style="display:inline-block;background:${brandColor};color:#ffffff;text-decoration:none;padding:12px 22px;border-radius:10px;font-size:14px;font-weight:700;">View Full Report</a>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:16px 30px;background:#f8fafc;border-top:1px solid #e2e8f0;">
+                <p style="margin:0 0 4px;font-size:12px;line-height:1.5;color:#64748b;">You received this email because analysis-result emails are enabled for your account.</p>
+                <p style="margin:0;font-size:12px;color:#94a3b8;">Manage preferences in <a href="${siteUrl}/history" style="color:#64748b;text-decoration:underline;">Account Settings</a>.</p>
               </td>
             </tr>
           </table>
-          <div style="max-width:600px;margin:32px auto 0;text-align:center;">
-            <p style="font-size:12px;color:#a0aec0;">&copy; ${new Date().getFullYear()} ${siteName} &middot; <a href="${siteUrl}/history" style="color:#a0aec0;text-decoration:underline;">Account Settings</a></p>
-          </div>
         </div>
       </body>
     </html>

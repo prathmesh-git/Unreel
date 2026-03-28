@@ -299,9 +299,31 @@ svg.icon-2xl { width: 36px; height: 36px; stroke-width: 1.5; flex-shrink: 0; }
 /* ── History Page ── */
 .history-page { min-height: 100vh; padding: 7rem 1rem 3rem; position: relative; z-index: 1; }
 .history-wrap { max-width: 980px; margin: 0 auto; }
+.history-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
 .history-wrap h1 { font-family: 'Space Grotesk', sans-serif; font-size: 2rem; margin-bottom: 0.35rem; }
 .history-subtitle { color: var(--text-2); margin-bottom: 1.2rem; }
 .history-meta { color: var(--text-2); font-size: 0.9rem; }
+.history-danger-btn {
+  border: 1px solid rgba(239,68,68,0.3);
+  background: rgba(239,68,68,0.1);
+  color: #fecaca;
+  border-radius: 999px;
+  padding: 0.55rem 1rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.history-danger-btn:hover {
+  background: rgba(239,68,68,0.16);
+  border-color: rgba(239,68,68,0.45);
+}
 .history-setting-card {
   background: var(--bg-card-med);
   border: 1px solid var(--border);
@@ -341,11 +363,91 @@ svg.icon-2xl { width: 36px; height: 36px; stroke-width: 1.5; flex-shrink: 0; }
 .history-empty h2 { font-family: 'Space Grotesk', sans-serif; font-size: 1.3rem; }
 .history-empty p { color: var(--text-2); font-size: 0.95rem; }
 .history-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1rem; }
-.history-card { display: block; background: var(--bg-card-med); border: 1px solid var(--border); border-radius: 20px; padding: 1.5rem; text-decoration: none; color: var(--text-1); transition: all 0.3s ease; backdrop-filter: blur(20px); box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+.history-card { display: flex; flex-direction: column; gap: 0.9rem; background: var(--bg-card-med); border: 1px solid var(--border); border-radius: 20px; padding: 1.5rem; color: var(--text-1); transition: all 0.3s ease; backdrop-filter: blur(20px); box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
 .history-card:hover { border-color: rgba(255,255,255,0.15); transform: translateY(-3px); box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05); }
+.history-card-link { text-decoration: none; color: inherit; }
 .history-card h3 { font-family: 'Space Grotesk', sans-serif; font-size: 1rem; margin-bottom: 0.35rem; }
 .history-card p { color: var(--text-2); font-size: 0.8rem; line-height: 1.5; }
 .history-score { margin-top: 0.45rem; color: var(--purple-2); font-weight: 600; }
+.history-delete-btn {
+  align-self: flex-start;
+  border: 1px solid rgba(248,250,252,0.15);
+  background: rgba(255,255,255,0.04);
+  color: var(--text-2);
+  border-radius: 999px;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.history-delete-btn:hover {
+  border-color: rgba(239,68,68,0.35);
+  color: #fecaca;
+  background: rgba(239,68,68,0.1);
+}
+.history-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 350;
+}
+.history-dialog {
+  width: min(480px, 100%);
+  border-radius: 22px;
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(15,15,22,0.92), rgba(11,11,16,0.96));
+  box-shadow: 0 30px 80px rgba(0,0,0,0.55);
+  padding: 1.35rem;
+}
+.history-dialog h2 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.2rem;
+  margin-bottom: 0.55rem;
+}
+.history-dialog p {
+  color: var(--text-2);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin-bottom: 1rem;
+}
+.history-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+.history-dialog-cancel,
+.history-dialog-confirm {
+  border-radius: 999px;
+  padding: 0.55rem 1rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.history-dialog-cancel {
+  border-color: rgba(248,250,252,0.18);
+  background: rgba(255,255,255,0.05);
+  color: var(--text-2);
+}
+.history-dialog-confirm {
+  border-color: rgba(239,68,68,0.45);
+  background: rgba(239,68,68,0.15);
+  color: #fecaca;
+}
+.history-dialog-cancel:hover { color: var(--text-1); }
+.history-dialog-confirm:hover { background: rgba(239,68,68,0.24); }
+.history-dialog-cancel:disabled,
+.history-dialog-confirm:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
 
 /* ── Main ── */
 main { position: relative; z-index: 1; }
@@ -587,6 +689,19 @@ main { position: relative; z-index: 1; }
   .history-setting-card {
     flex-direction: column;
     align-items: flex-start;
+  }
+  .history-title-row {
+    align-items: flex-start;
+  }
+  .history-danger-btn {
+    width: 100%;
+  }
+  .history-dialog-actions {
+    flex-direction: column;
+  }
+  .history-dialog-cancel,
+  .history-dialog-confirm {
+    width: 100%;
   }
   .transcript-body { padding: 0 1rem 1rem; }
   .transcript-text { font-size: 0.8rem; padding: 0.65rem; }

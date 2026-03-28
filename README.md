@@ -61,7 +61,7 @@ unreel/
 ├── routes/                   # Express route handlers
 │   ├── analyze.js            # POST /api/analyze/url, /upload, /text
 │   ├── auth.js               # POST /api/auth/register, /login, /google
-│   ├── history.js            # GET  /api/history
+│   ├── history.js            # GET / DELETE /api/history
 │   └── results.js            # GET  /api/results, /api/results/:id
 ├── .env.example
 ├── Dockerfile
@@ -160,6 +160,8 @@ Open [http://localhost:3000](http://localhost:3000)
 | GET    | `/api/results`         | —        | Fetch recent analyses              |
 | GET    | `/api/results/:id`     | —        | Fetch a single analysis by ID      |
 | GET    | `/api/history`         | Required | Fetch user's past analyses         |
+| DELETE | `/api/history/:id`     | Required | Delete one history item            |
+| DELETE | `/api/history`         | Required | Clear all history items            |
 | POST   | `/api/auth/register`   | —        | Register with email/password       |
 | POST   | `/api/auth/login`      | —        | Login with email/password          |
 | POST   | `/api/auth/google`     | —        | Login/register via Google OAuth    |

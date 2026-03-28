@@ -11,6 +11,8 @@ export default function HistoryPage() {
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState('');
   const [savingPref, setSavingPref] = useState(false);
+  const [pendingAction, setPendingAction] = useState(null);
+  const [actionLoading, setActionLoading] = useState(false);
 
   const emailResultsEnabled = user?.preferences?.emailAnalysisResults !== false;
 
@@ -69,10 +71,70 @@ export default function HistoryPage() {
     }
   }
 
+  function openDeleteDialog(item) {
+    setPendingAction({
+      type: 'single',
+      itemId: item.id,
+      title: item.title || 'this analysis',
+    });
+  }
+
+  function openClearAllDialog() {
+    setPendingAction({ type: 'all' });
+  }
+
+  function closeDialog() {
+    if (actionLoading) return;
+    setPendingAction(null);
+  }
+
+  async function onConfirmDelete() {
+    if (!pendingAction || !token) return;
+
+    try {
+      setActionLoading(true);
+
+      const endpoint = pendingAction.type === 'single'
+        ? apiUrl(`/api/history/${pendingAction.itemId}`)
+        : apiUrl('/api/history');
+
+      const res = await fetch(endpoint, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Could not delete history.');
+      }
+
+      if (pendingAction.type === 'single') {
+        setItems((prev) => prev.filter((item) => item.id !== pendingAction.itemId));
+        showToast('History item deleted.');
+      } else {
+        setItems([]);
+        showToast('All history cleared.');
+      }
+
+      setPendingAction(null);
+    } catch (err) {
+      showToast(err.message || 'Could not delete history.', { tone: 'error' });
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
   return (
     <main className="history-page">
       <section className="history-wrap">
-        <h1>Analysis History</h1>
+        <div className="history-title-row">
+          <h1>Analysis History</h1>
+          {!fetching && items.length > 0 && (
+            <button className="history-danger-btn" type="button" onClick={openClearAllDialog}>
+              Clear all history
+            </button>
+          )}
+        </div>
         <p className="history-subtitle">Your previously saved Unreel analyses.</p>
 
         <div className="history-setting-card">
@@ -106,12 +168,50 @@ export default function HistoryPage() {
         {!fetching && !error && items.length > 0 && (
           <div className="history-grid">
             {items.map((item) => (
-              <Link className="history-card" key={item.id} to={`/results/${item.id}`}>
-                <h3>{item.title || 'Video'}</h3>
-                <p>{item.platform || 'Unknown'} · {new Date(item.createdAt).toLocaleString()}</p>
-                <p className="history-score">Bias score: {item.biasScore ?? 0}</p>
-              </Link>
+              <article className="history-card" key={item.id}>
+                <Link className="history-card-link" to={`/results/${item.id}`}>
+                  <h3>{item.title || 'Video'}</h3>
+                  <p>{item.platform || 'Unknown'} · {new Date(item.createdAt).toLocaleString()}</p>
+                  <p className="history-score">Bias score: {item.biasScore ?? 0}</p>
+                </Link>
+                <button
+                  className="history-delete-btn"
+                  type="button"
+                  onClick={() => openDeleteDialog(item)}
+                >
+                  Delete
+                </button>
+              </article>
             ))}
+          </div>
+        )}
+
+        {pendingAction && (
+          <div className="history-dialog-backdrop" role="presentation" onClick={closeDialog}>
+            <div
+              className="history-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="history-dialog-title"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2 id="history-dialog-title">
+                {pendingAction.type === 'single' ? 'Delete this analysis?' : 'Clear entire history?'}
+              </h2>
+              <p>
+                {pendingAction.type === 'single'
+                  ? `This will permanently remove "${pendingAction.title}" from your history.`
+                  : 'This will permanently remove all saved analyses from your account.'}
+              </p>
+              <div className="history-dialog-actions">
+                <button type="button" className="history-dialog-cancel" onClick={closeDialog} disabled={actionLoading}>
+                  Cancel
+                </button>
+                <button type="button" className="history-dialog-confirm" onClick={onConfirmDelete} disabled={actionLoading}>
+                  {actionLoading ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </section>
