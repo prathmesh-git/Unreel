@@ -235,6 +235,9 @@ function getDownloadHint(url, rawError = '') {
   if (platform === 'TikTok') {
     return 'TikTok may restrict downloads. Please try uploading the video file instead.';
   }
+  if (platform === 'Telegram') {
+    return 'Telegram links must be public channel post URLs. Private channel/group links cannot be downloaded by the server.';
+  }
   return 'Please try uploading the video file instead.';
 }
 

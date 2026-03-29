@@ -6,6 +6,7 @@ const path = require('path');
 const fs = require('fs');
 const { getDownloaderDiagnostics } = require('./modules/downloader');
 const { getMailDiagnostics, verifyMailTransport } = require('./modules/mailer');
+const { startTelegramBot } = require('./modules/telegramBot');
 
 const analyzeRoutes = require('./routes/analyze');
 const resultsRoutes = require('./routes/results');
@@ -137,4 +138,7 @@ app.listen(PORT, () => {
 ║  Running at: http://localhost:${PORT}     ║
 ╚═══════════════════════════════════════╝
   `);
+
+  const localApiUrl = process.env.TELEGRAM_ANALYZE_API_URL || `http://127.0.0.1:${PORT}`;
+  startTelegramBot({ apiBaseUrl: localApiUrl });
 });

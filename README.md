@@ -135,6 +135,29 @@ npm start          # Starts the Express server serving the built frontend
 
 Open [http://localhost:3000](http://localhost:3000)
 
+### 5. Telegram Bot (Optional)
+
+If you already created a Telegram bot token, add this to `.env`:
+
+```env
+TELEGRAM_BOT_TOKEN=your_bot_token
+TELEGRAM_BOT_POLLING=true
+TELEGRAM_ANALYZE_API_URL=http://127.0.0.1:3000
+```
+
+Then start the server with `npm start` or `npm run dev:server`.
+
+In Telegram:
+
+1. Open your bot and send `/start`
+2. Send one link like:
+	- `https://t.me/channel_name/123`
+	- `https://www.instagram.com/reel/abc123/`
+	- `https://www.youtube.com/shorts/abc123`
+3. The bot replies with fact-check + bias summary
+
+The bot currently accepts public Telegram post links, Instagram Reels, and YouTube Shorts links.
+
 ---
 
 ## Frontend Routes

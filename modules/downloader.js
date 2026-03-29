@@ -432,6 +432,7 @@ function detectPlatform(url) {
   if (url.includes('youtube.com') || url.includes('youtu.be')) return 'YouTube';
   if (url.includes('instagram.com')) return 'Instagram';
   if (url.includes('tiktok.com')) return 'TikTok';
+  if (url.includes('t.me') || url.includes('telegram.me')) return 'Telegram';
   if (url.includes('twitter.com') || url.includes('x.com')) return 'Twitter/X';
   if (url.includes('facebook.com')) return 'Facebook';
   return 'Unknown';
