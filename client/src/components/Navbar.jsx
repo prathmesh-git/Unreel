@@ -3,6 +3,12 @@ import { Aperture, Menu, X, Sun, Moon } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
+const TelegramIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="M21.94 4.66c.3-1.24-.45-1.73-1.53-1.33L3.46 9.88c-1.16.45-1.14 1.1-.2 1.38l4.35 1.36 1.67 5.18c.2.56.1.8.69.8.45 0 .64-.2.9-.45l2.17-2.1 4.5 3.32c.83.46 1.44.22 1.65-.77L21.94 4.66z" />
+  </svg>
+);
+
 export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -26,7 +32,6 @@ export default function Navbar() {
   }, [user?.avatar]);
 
   const isHistory = useMemo(() => location.pathname === '/history', [location.pathname]);
-  const isAnalyzing = useMemo(() => location.pathname === '/analyze' || location.pathname.startsWith('/results'), [location.pathname]);
   const isHome = useMemo(() => location.pathname === '/', [location.pathname]);
 
   function goHome() {
@@ -74,7 +79,10 @@ export default function Navbar() {
                 <button type="button" className="nav-link-btn" onClick={() => goToSection('features')}>Features</button>
               </>
             )}
-            <button type="button" className={`nav-link-btn cta ${isHome ? 'active' : ''}`} onClick={goHome}>Analyze</button>
+            <Link to="/telegram-bot" className="nav-link-btn nav-link-btn-telegram">
+              <TelegramIcon />
+              Telegram Bot
+            </Link>
           </div>
         </div>
 
@@ -130,7 +138,10 @@ export default function Navbar() {
 
       {mobileOpen && (
         <div className="mobile-nav-panel">
-          <button type="button" className="mobile-nav-link" onClick={goHome}>Analyze</button>
+          <Link to="/telegram-bot" className="mobile-nav-link mobile-nav-link-telegram">
+            <TelegramIcon />
+            Telegram Bot
+          </Link>
           {isHome && (
             <>
               <button type="button" className="mobile-nav-link" onClick={() => goToSection('how-it-works')}>How it Works</button>

@@ -17,6 +17,58 @@ Paste a short-form video link, upload a file, or paste a transcript and Unreel w
 
 ---
 
+## Telegram Bot
+
+- Bot Link: https://t.me/unreel_analyser_bot
+- Use case: Analyze short-form video links directly inside Telegram chat
+- Supports: Public Telegram post links, Instagram Reels, YouTube Shorts
+
+---
+
+## Recent Changes (Done / In Progress)
+
+### Done
+
+1. Added Telegram bot integration in backend startup flow (`modules/telegramBot.js` + `server.js`).
+2. Added Telegram bot environment config (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_POLLING`, `TELEGRAM_ANALYZE_API_URL`).
+3. Expanded bot URL intake beyond Telegram links to include:
+	- Instagram `/reel/...` and `/reels/...`
+	- YouTube Shorts `/shorts/...` and `youtu.be/...`
+4. Improved bot UX with:
+	- Better `/start` welcome and guided instructions
+	- `/help`, `/supported`, `/examples`, `/status` commands
+	- Persistent quick-action keyboard buttons
+	- Progress typing indicator while analysis runs
+5. Improved scenario handling messages for:
+	- invalid links
+	- unsupported links
+	- multiple links in one message
+	- private/login-protected links
+	- timeouts and rate limits
+	- concurrent in-chat requests
+6. Reworked Telegram analysis output into a professional report format:
+	- video overview
+	- fact-check summary + verdict breakdown
+	- top findings with confidence/recency
+	- bias assessment summary
+7. Added homepage dashboard section to promote Telegram bot with direct CTA link.
+
+### Existing Improvements Already Present
+
+1. Auth system with JWT + Google login.
+2. Optional analysis history persistence per user.
+3. Date-aware fact-checking with content date and recency reason fields.
+4. Better downloader diagnostics and user-facing download failure hints.
+5. Fallback-safe frontend serving in production.
+
+### In Progress / Next
+
+1. Optional webhook mode for Telegram bot (alternative to polling).
+2. Additional bot report enhancements (richer source preview formatting).
+3. Optional dedicated Telegram user mapping for persistent per-chat history.
+
+---
+
 ## Tech Stack
 
 | Layer     | Technology                                      |

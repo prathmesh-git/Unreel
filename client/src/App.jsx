@@ -11,6 +11,7 @@ import { useAuth } from './context/AuthContext';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import HistoryPage from './pages/HistoryPage';
+import TelegramBotPage from './pages/TelegramBotPage';
 
 function HomePage() {
   const navigate = useNavigate();
@@ -93,6 +94,7 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/history" element={<HistoryPage />} />
+        <Route path="/telegram-bot" element={<TelegramBotPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 
