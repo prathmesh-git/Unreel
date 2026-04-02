@@ -34,6 +34,7 @@ export default function ResultsPage() {
               setResult({
                 videoInfo: parsed.videoInfo,
                 transcript: parsed.transcript,
+                captions: parsed.captions,
                 onScreenText: parsed.onScreenText,
                 factChecks: parsed.factChecks,
                 bias: parsed.bias,
@@ -114,11 +115,13 @@ export default function ResultsPage() {
   const {
     videoInfo,
     transcript,
+    captions,
     onScreenText,
     factChecks = [],
     bias = { score: 0, level: 'UNKNOWN', type: 'Unknown', indicators: [], explanation: 'No bias analysis available.' },
     analyzedAt,
   } = result;
+  const hasCaptions = typeof captions === 'string' && captions.trim().length > 0;
 
   return (
     <div className="results-page">
@@ -138,6 +141,7 @@ export default function ResultsPage() {
             <h3>{videoInfo?.title || 'Video'}</h3>
             <p>{videoInfo?.platform} · {new Date(analyzedAt).toLocaleTimeString()}</p>
             {videoInfo?.contentDate && <p>Content date detected: {videoInfo.contentDate}</p>}
+            <p>{hasCaptions ? 'Post caption extracted: available' : 'Post caption extracted: not available for this video'}</p>
             <p>Analysis ID: {id}</p>
             {videoInfo?.url && (
               <a href={videoInfo.url} target="_blank" rel="noopener noreferrer" className="source-link" style={{ marginTop: '0.4rem' }}>
@@ -154,8 +158,11 @@ export default function ResultsPage() {
           </CollapsibleCard>
         )}
 
-        {/* Bias Meter */}
-        <BiasCard bias={bias} />
+        {captions && (
+          <CollapsibleCard icon={FileText} label="Post Caption">
+            {captions}
+          </CollapsibleCard>
+        )}
 
         {/* Fact Checks */}
         <div>
@@ -167,12 +174,15 @@ export default function ResultsPage() {
           {factChecks.length === 0 && (
             <div className="claim-card">
               <div className="claim-explanation">
-                No verifiable factual statements were detected in this transcript. This usually means the video is mostly opinion, rhetoric, or emotional commentary rather than checkable factual claims.
+                No verifiable factual statements were detected in the available content. This usually means the video is mostly opinion, rhetoric, or emotional commentary rather than checkable factual claims.
               </div>
             </div>
           )}
           {factChecks.map((fc, i) => <ClaimCard key={i} fc={fc} />)}
         </div>
+
+        {/* Bias Meter */}
+        <BiasCard bias={bias} />
 
         {/* Transcript */}
         <CollapsibleCard icon={FileText} label="View Transcript">

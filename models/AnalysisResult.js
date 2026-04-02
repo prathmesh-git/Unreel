@@ -49,6 +49,7 @@ const analysisResultSchema = new mongoose.Schema(
       url: { type: String, default: null },
     },
     transcript: { type: String, default: '' },
+    captions: { type: String, default: '' },
     onScreenText: { type: String, default: null },
     factChecks: { type: [factCheckSchema], default: [] },
     bias: { type: biasSchema, required: true },

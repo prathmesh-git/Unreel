@@ -7,6 +7,8 @@ const os = require('os');
 const TEMP_DIR = os.tmpdir();
 const INSTAGRAM_BROWSER_CANDIDATES = ['chrome', 'edge', 'firefox'];
 const BROWSER_COOKIE_LABEL_TOKEN = 'cookies';
+const SUBTITLE_EXTENSIONS = new Set(['.vtt', '.srt', '.ass', '.ssa', '.ttml', '.sbv', '.lrc']);
+const MEDIA_EXTENSIONS = new Set(['.mp4', '.mkv', '.webm', '.mov', '.m4v', '.avi', '.flv', '.wmv', '.ts', '.m4a', '.mp3', '.mka', '.opus']);
 let resolvedInstagramCookiesFile = null;
 let resolvedYtDlpCookiesFile = null;
 
@@ -279,6 +281,11 @@ function buildBaseArgs(targetUrl, outputTemplate) {
     '--max-filesize', '50M',
     '--no-playlist',
     '--no-simulate',
+    '--write-subs',
+    '--write-auto-subs',
+    '--sub-langs', 'all',
+    '--convert-subs', 'srt',
+    '--write-info-json',
     '--print', 'UNREEL_TITLE:%(title)s',
     '--print', 'UNREEL_UPLOAD_DATE:%(upload_date>%Y-%m-%d)s',
     '--no-warnings',
@@ -395,15 +402,40 @@ function runYtDlp(args, outputId, platform) {
 
     ytdlp.on('close', code => {
       clearTimeout(timer);
-      const downloaded = fs.readdirSync(TEMP_DIR).find(f => f.startsWith(`unreel_${outputId}`));
+      const matchedFiles = fs.readdirSync(TEMP_DIR).filter(f => f.startsWith(`unreel_${outputId}`));
+      const downloaded = findDownloadedMediaFile(matchedFiles);
 
       if (code === 0 && downloaded) {
         const title = parsePrintedField(stdout, 'UNREEL_TITLE:') || 'Unknown Video';
         const publishedAt = normalizePublishedDate(parsePrintedField(stdout, 'UNREEL_UPLOAD_DATE:'));
         const videoPath = path.join(TEMP_DIR, downloaded);
+        const subtitleCaptions = extractCaptionText(matchedFiles, downloaded);
+        
+        // Extract description from JSON metadata file for full content without truncation
+        let description = '';
+        const jsonFile = matchedFiles.find(f => f.endsWith('.info.json'));
+        if (jsonFile) {
+          try {
+            const jsonPath = path.join(TEMP_DIR, jsonFile);
+            const metadata = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+            description = normalizeText(metadata.description || '');
+            fs.unlinkSync(jsonPath);
+          } catch (err) {
+            console.warn(`[Unreel] Failed to read JSON metadata: ${err.message}`);
+          }
+        }
+        
+        const captions = subtitleCaptions || description;
         const fileSizeMB = (fs.statSync(videoPath).size / (1024 * 1024)).toFixed(1);
         console.log(`[Unreel] Downloaded file: ${videoPath} (${fileSizeMB} MB)`);
-        resolve({ videoPath, title, platform, publishedAt });
+        resolve({
+          videoPath,
+          title,
+          platform,
+          publishedAt,
+          captions: captions || null,
+          captionSource: subtitleCaptions ? 'subtitles' : description ? 'description' : null,
+        });
         return;
       }
 
@@ -426,6 +458,76 @@ function cleanupByOutputId(outputId) {
         fs.unlinkSync(path.join(TEMP_DIR, f));
       } catch {}
     });
+}
+
+function findDownloadedMediaFile(files) {
+  const candidates = files
+    .filter(fileName => {
+      const ext = path.extname(fileName).toLowerCase();
+      return ext && MEDIA_EXTENSIONS.has(ext) && !SUBTITLE_EXTENSIONS.has(ext);
+    })
+    .sort((a, b) => {
+      const aScore = mediaPriorityScore(a);
+      const bScore = mediaPriorityScore(b);
+      return aScore - bScore;
+    });
+
+  return candidates[0] || null;
+}
+
+function mediaPriorityScore(fileName) {
+  const ext = path.extname(fileName).toLowerCase();
+  if (ext === '.mp4') return 0;
+  if (ext === '.mkv' || ext === '.webm' || ext === '.mov' || ext === '.m4v') return 1;
+  return 2;
+}
+
+function extractCaptionText(files, mediaFileName) {
+  const captionFiles = files.filter((fileName) => {
+    if (fileName === mediaFileName) return false;
+    const ext = path.extname(fileName).toLowerCase();
+    return SUBTITLE_EXTENSIONS.has(ext);
+  });
+
+  if (captionFiles.length === 0) return '';
+
+  const textSegments = [];
+  for (const fileName of captionFiles) {
+    const filePath = path.join(TEMP_DIR, fileName);
+    try {
+      const raw = fs.readFileSync(filePath, 'utf8');
+      const normalized = normalizeCaptionFileText(raw);
+      if (normalized) textSegments.push(normalized);
+      fs.unlinkSync(filePath);
+    } catch {}
+  }
+
+  return textSegments.join('\n\n').trim();
+}
+
+function normalizeCaptionFileText(rawText) {
+  const lines = String(rawText || '')
+    .replace(/\r/g, '')
+    .split('\n')
+    .map(line => line.trim())
+    .filter(Boolean)
+    .filter(line => !/^WEBVTT/i.test(line))
+    .filter(line => !/^\d+$/.test(line))
+    .filter(line => !/^(NOTE|STYLE|REGION)\b/i.test(line))
+    .filter(line => !/^\d{2}:\d{2}:\d{2}[.,]\d{3}\s+-->\s+\d{2}:\d{2}:\d{2}[.,]\d{3}/.test(line))
+    .filter(line => !/^\d{2}:\d{2}:\d{2}[.,]\d{3}\s+-->\s+\d{2}:\d{2}:\d{2}[.,]\d{3}/.test(line))
+    .filter(line => !/^<[^>]+>$/.test(line))
+    .map(line => line.replace(/<[^>]+>/g, '').trim())
+    .filter(Boolean);
+
+  return lines.join(' ').replace(/\s+/g, ' ').trim();
+}
+
+function normalizeText(text) {
+  return String(text || '')
+    .replace(/\r/g, '')
+    .replace(/\u0000/g, '')
+    .trim();
 }
 
 function detectPlatform(url) {

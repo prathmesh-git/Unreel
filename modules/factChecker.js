@@ -11,6 +11,8 @@ async function factCheckClaim(claim, context = {}) {
   let searchResults = [];
   const analyzedAt = context.analyzedAt || new Date().toISOString();
   const contentDate = context.contentDate || 'Unknown';
+  const contentText = typeof context.contentText === 'string' ? context.contentText.trim() : '';
+  const contentSnippet = contentText ? contentText.slice(0, 1200) : '';
 
   // Step 1: Search for evidence using Tavily (optional)
   try {
@@ -19,7 +21,9 @@ async function factCheckClaim(claim, context = {}) {
         TAVILY_API,
         {
           api_key: process.env.TAVILY_API_KEY,
-          query: `${claim} ${contentDate !== 'Unknown' ? `around ${contentDate}` : ''}`,
+          query: [claim, contentDate !== 'Unknown' ? `around ${contentDate}` : '', contentSnippet ? extractSearchKeywords(contentSnippet) : '']
+            .filter(Boolean)
+            .join(' '),
           search_depth: 'basic',
           max_results: 5,
           include_domains: ['who.int', 'nih.gov', 'bbc.com', 'reuters.com', 'apnews.com', 'snopes.com', 'factcheck.org', 'nature.com', 'pubmed.ncbi.nlm.nih.gov'],
@@ -46,12 +50,15 @@ Respond with ONLY a valid JSON object:
   "confidence": "HIGH" | "MEDIUM" | "LOW",
   "recency": "CURRENT" | "OUTDATED" | "TIMELESS" | "UNCERTAIN",
   "recencyReason": "1 short sentence about whether timing changes the claim"
-}`;
+  }
+
+  Important: use UNVERIFIED only when the evidence is genuinely insufficient or conflicting. If the available evidence supports the claim, prefer TRUE, FALSE, or MISLEADING instead of defaulting to uncertainty.`;
 
   const userPrompt = `CLAIM: "${claim}"
 CONTENT DATE (when reel/text was created): ${contentDate}
 ANALYSIS DATE (today): ${analyzedAt}
 
+${contentSnippet ? `VIDEO CONTEXT EXCERPT:\n${contentSnippet}\n` : ''}
 ${searchContext ? `SEARCH EVIDENCE:\n${searchContext}\n` : 'No search evidence available. Use your knowledge.'}
 
 Analyze this claim and give a verdict.`;
@@ -116,6 +123,21 @@ Analyze this claim and give a verdict.`;
     };
   }
 }
+
+function extractSearchKeywords(text) {
+  return String(text)
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, ' ')
+    .split(/\s+/)
+    .filter(word => word.length > 3)
+    .filter(word => !STOPWORDS.has(word))
+    .slice(0, 10)
+    .join(' ');
+}
+
+const STOPWORDS = new Set([
+  'this', 'that', 'with', 'from', 'have', 'will', 'your', 'about', 'there', 'their', 'they', 'them', 'been', 'were', 'what', 'when', 'where', 'which', 'while', 'into', 'over', 'under', 'more', 'than', 'then', 'just', 'like', 'only', 'some', 'said', 'says', 'caption', 'captions', 'subtitle', 'subtitles', 'video', 'shorts', 'reel', 'reels',
+]);
 
 /**
  * Fact-check all claims sequentially (to avoid rate limits)

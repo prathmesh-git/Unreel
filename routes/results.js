@@ -71,6 +71,7 @@ router.get('/:id', async (req, res) => {
         id: doc._id,
         videoInfo: doc.videoInfo,
         transcript: doc.transcript,
+        captions: doc.captions,
         onScreenText: doc.onScreenText,
         factChecks: doc.factChecks,
         bias: doc.bias,

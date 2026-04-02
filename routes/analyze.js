@@ -41,7 +41,7 @@ router.post('/url', optionalAuth, async (req, res) => {
   let videoPath = null;
   try {
     console.log(`[Unreel] Downloading: ${url}`);
-    const { videoPath: vPath, title, platform, publishedAt } = await downloadVideo(url);
+    const { videoPath: vPath, title, platform, publishedAt, captions } = await downloadVideo(url);
     videoPath = vPath;
     console.log(`[Unreel] Downloaded: ${title} (${platform})`);
 
@@ -53,23 +53,24 @@ router.post('/url', optionalAuth, async (req, res) => {
     console.log(`[Unreel] Transcript (${transcript.length} chars)`);
 
     const onScreenText = await extractOnScreenText(keyframes);
-    const fullContent = [transcript, onScreenText].filter(Boolean).join('\n\n[ON-SCREEN TEXT]:\n');
+    const combinedContent = buildCombinedContent({ transcript, captions, onScreenText });
 
     console.log('[Unreel] Extracting claims...');
-    const claims = await extractClaims(fullContent);
+    const claims = await extractClaims(combinedContent);
 
     console.log('[Unreel] Fact-checking and bias analysis...');
     const analyzedAt = new Date().toISOString();
-    const inferredDate = inferContentDate(fullContent);
+    const inferredDate = inferContentDate(combinedContent);
     const contentDate = publishedAt || inferredDate || null;
     const [factCheckResults, biasResult] = await Promise.all([
-      factCheckAll(claims, { contentDate, analyzedAt, sourceType: 'url', platform }),
-      analyzeBias(fullContent, claims),
+      factCheckAll(claims, { contentDate, analyzedAt, sourceType: 'url', platform, contentText: combinedContent }),
+      analyzeBias(combinedContent, claims),
     ]);
 
     const analysisData = {
       videoInfo: { title, platform, url, contentDate },
       transcript,
+      captions: captions || null,
       onScreenText: onScreenText || null,
       factChecks: factCheckResults,
       bias: biasResult,
@@ -199,6 +200,24 @@ function isValidUrl(str) {
   }
 }
 
+function buildCombinedContent({ transcript = '', captions = '', onScreenText = '' }) {
+  const parts = [];
+
+  if (captions && captions.trim()) {
+    parts.push(`[CAPTIONS]\n${captions.trim()}`);
+  }
+
+  if (transcript && transcript.trim()) {
+    parts.push(`[TRANSCRIPT]\n${transcript.trim()}`);
+  }
+
+  if (onScreenText && onScreenText.trim()) {
+    parts.push(`[ON-SCREEN TEXT]\n${onScreenText.trim()}`);
+  }
+
+  return parts.join('\n\n').trim();
+}
+
 function getDownloadHint(url, rawError = '') {
   const platform = detectPlatform(url);
   const details = rawError.toLowerCase();
@@ -277,6 +296,7 @@ function toApiResponse(data, resultId) {
     resultId,
     videoInfo: data.videoInfo,
     transcript: transcript.slice(0, 1000) + (transcript.length > 1000 ? '...' : ''),
+    captions: data.captions,
     onScreenText: data.onScreenText,
     factChecks: data.factChecks,
     bias: data.bias,
@@ -291,6 +311,7 @@ async function persistResult(data, sourceType, userId = null) {
       userId: userId || null,
       videoInfo: data.videoInfo,
       transcript: data.transcript,
+      captions: data.captions,
       onScreenText: data.onScreenText,
       factChecks: data.factChecks,
       bias: data.bias,
