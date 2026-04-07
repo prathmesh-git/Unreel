@@ -12,6 +12,9 @@ const analyzeRoutes = require('./routes/analyze');
 const resultsRoutes = require('./routes/results');
 const authRoutes = require('./routes/auth');
 const historyRoutes = require('./routes/history');
+const blogRoutes = require('./routes/blog');
+const trendingRoutes = require('./routes/trending');
+const leaderboardRoutes = require('./routes/leaderboard');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -52,6 +55,9 @@ app.use('/api/analyze', analyzeRoutes);
 app.use('/api/results', resultsRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/history', historyRoutes);
+app.use('/api/blogs', blogRoutes);
+app.use('/api/trending', trendingRoutes);
+app.use('/api/top-analysed', leaderboardRoutes);
 
 app.get('/api/health', (_req, res) => {
   res.json({
@@ -92,6 +98,7 @@ app.get('/sitemap.xml', (req, res) => {
   const today = new Date().toISOString();
   const urls = [
     { loc: `${baseUrl}/`, changefreq: 'daily', priority: '1.0', lastmod: today },
+    { loc: `${baseUrl}/blog`, changefreq: 'daily', priority: '0.8', lastmod: today },
   ];
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>\n` +

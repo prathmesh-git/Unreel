@@ -62,7 +62,11 @@ router.get('/:id', async (req, res) => {
   }
 
   try {
-    const doc = await AnalysisResult.findById(id).lean();
+    const doc = await AnalysisResult.findByIdAndUpdate(
+      id,
+      { $inc: { views: 1 } },
+      { new: true }
+    ).lean();
     if (!doc) return res.status(404).json({ error: 'Result not found.' });
 
     res.json({

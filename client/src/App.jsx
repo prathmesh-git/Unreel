@@ -2,6 +2,10 @@ import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
+import StatsSection from './components/StatsSection';
+import TrendingSection from './components/TrendingSection';
+import LeaderboardSection from './components/LeaderboardSection';
+import BlogSection from './components/BlogSection';
 import HowItWorks from './components/HowItWorks';
 import Features from './components/Features';
 import Footer from './components/Footer';
@@ -12,6 +16,8 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import HistoryPage from './pages/HistoryPage';
 import TelegramBotPage from './pages/TelegramBotPage';
+import BlogPage from './pages/BlogPage';
+import BlogPostPage from './pages/BlogPostPage';
 
 function HomePage() {
   const navigate = useNavigate();
@@ -65,6 +71,10 @@ function HomePage() {
           onAnalyzeUpload={analyzeUpload}
           onAnalyzeText={analyzeText}
         />
+        <StatsSection />
+        <TrendingSection />
+        <LeaderboardSection />
+        <BlogSection />
         <HowItWorks />
         <Features />
       </main>
@@ -95,6 +105,8 @@ export default function App() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/history" element={<HistoryPage />} />
         <Route path="/telegram-bot" element={<TelegramBotPage />} />
+        <Route path="/blog" element={<BlogPage />} />
+        <Route path="/blog/:slug" element={<BlogPostPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 

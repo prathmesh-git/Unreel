@@ -77,8 +77,10 @@ export default function Navbar() {
               <>
                 <button type="button" className="nav-link-btn" onClick={() => goToSection('how-it-works')}>How it Works</button>
                 <button type="button" className="nav-link-btn" onClick={() => goToSection('features')}>Features</button>
+                <button type="button" className="nav-link-btn" onClick={() => goToSection('trending')}>Trending</button>
               </>
             )}
+            <Link to="/blog" className="nav-link-btn">Blog</Link>
             <Link to="/telegram-bot" className="nav-link-btn nav-link-btn-telegram">
               <TelegramIcon />
               Telegram Bot
@@ -142,8 +144,10 @@ export default function Navbar() {
             <TelegramIcon />
             Telegram Bot
           </Link>
+          <Link to="/blog" className="mobile-nav-link">Blog</Link>
           {isHome && (
             <>
+              <button type="button" className="mobile-nav-link" onClick={() => goToSection('trending')}>Trending</button>
               <button type="button" className="mobile-nav-link" onClick={() => goToSection('how-it-works')}>How it Works</button>
               <button type="button" className="mobile-nav-link" onClick={() => goToSection('features')}>Features</button>
             </>

@@ -29,7 +29,8 @@ Paste a short-form video link, upload a file, or paste a transcript and Unreel w
 
 ### Done
 
-1. Added Telegram bot integration in backend startup flow (`modules/telegramBot.js` + `server.js`).
+1. **Content Platform Expansion**: Added a comprehensive Markdown-powered Blog system, carefully curated & auto-generated Trending Topics, a Most Analysed Leaderboard, and real-time Platform Statistics.
+2. Added Telegram bot integration in backend startup flow (`modules/telegramBot.js` + `server.js`).
 2. Added Telegram bot environment config (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_POLLING`, `TELEGRAM_ANALYZE_API_URL`).
 3. Expanded bot URL intake beyond Telegram links to include:
 	- Instagram `/reel/...` and `/reels/...`
@@ -89,9 +90,11 @@ unreel/
 ├── client/                  # React frontend (Vite)
 │   ├── src/
 │   │   ├── components/      # Navbar, Hero, HowItWorks, Features, Footer,
-│   │   │                    # ResultsOverlay, ResultsPage
+│   │   │                    # ResultsOverlay, ResultsPage, BlogSection,
+│   │   │                    # LeaderboardSection, StatsSection, TrendingSection
 │   │   ├── context/         # AuthContext (JWT + Google OAuth)
-│   │   ├── pages/           # AnalyzePage, HistoryPage, LoginPage, RegisterPage
+│   │   ├── pages/           # AnalyzePage, HistoryPage, LoginPage, RegisterPage,
+│   │   │                    # BlogPage, BlogPostPage
 │   │   ├── App.jsx
 │   │   ├── App.css
 │   │   └── main.jsx
@@ -113,7 +116,10 @@ unreel/
 ├── routes/                   # Express route handlers
 │   ├── analyze.js            # POST /api/analyze/url, /upload, /text
 │   ├── auth.js               # POST /api/auth/register, /login, /google
+│   ├── blog.js               # GET /api/blogs, /api/blogs/:slug
 │   ├── history.js            # GET / DELETE /api/history
+│   ├── leaderboard.js        # GET /api/top-analysed
+│   ├── trending.js           # GET /api/trending
 │   └── results.js            # GET  /api/results, /api/results/:id
 ├── .env.example
 ├── Dockerfile
@@ -216,12 +222,14 @@ The bot currently accepts public Telegram post links, Instagram Reels, and YouTu
 
 | Route           | Page                  |
 |-----------------|-----------------------|
-| `/`             | Dashboard (input form, How It Works, Features) |
+| `/`             | Dashboard (input form, stats, trending, leaderboard, blog) |
 | `/analyze`      | Analysis loading page (redirected on submit) |
 | `/results/:id`  | Full analysis results |
 | `/history`      | Past analyses (authenticated users) |
 | `/login`        | Login page            |
 | `/register`     | Register page         |
+| `/blog`         | Blog listing page     |
+| `/blog/:slug`   | Individual blog post page |
 
 ---
 
@@ -234,6 +242,10 @@ The bot currently accepts public Telegram post links, Instagram Reels, and YouTu
 | POST   | `/api/analyze/text`    | Optional | Analyze pasted transcript text     |
 | GET    | `/api/results`         | —        | Fetch recent analyses              |
 | GET    | `/api/results/:id`     | —        | Fetch a single analysis by ID      |
+| GET    | `/api/blogs`           | —        | Fetch blog posts (paginated)       |
+| GET    | `/api/blogs/:slug`     | —        | Fetch single blog post             |
+| GET    | `/api/trending`        | —        | Fetch trending content issues      |
+| GET    | `/api/top-analysed`    | —        | Fetch leaderboard (sortable)       |
 | GET    | `/api/history`         | Required | Fetch user's past analyses         |
 | DELETE | `/api/history/:id`     | Required | Delete one history item            |
 | DELETE | `/api/history`         | Required | Clear all history items            |

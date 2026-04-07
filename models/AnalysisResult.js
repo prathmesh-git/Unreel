@@ -59,6 +59,7 @@ const analysisResultSchema = new mongoose.Schema(
       default: 'url',
     },
     analyzedAt: { type: Date, default: Date.now },
+    views: { type: Number, default: 0 },
   },
   {
     timestamps: true,
@@ -68,5 +69,6 @@ const analysisResultSchema = new mongoose.Schema(
 analysisResultSchema.index({ createdAt: -1 });
 analysisResultSchema.index({ 'videoInfo.platform': 1, createdAt: -1 });
 analysisResultSchema.index({ userId: 1, createdAt: -1 });
+analysisResultSchema.index({ views: -1, createdAt: -1 });
 
 module.exports = mongoose.model('AnalysisResult', analysisResultSchema);
