@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react';
-import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import StatsSection from './components/StatsSection';
@@ -20,57 +19,10 @@ import BlogPage from './pages/BlogPage';
 import BlogPostPage from './pages/BlogPostPage';
 
 function HomePage() {
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  const [activeTab, setActiveTab]       = useState('url');
-  const [url, setUrl]                   = useState('');
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [transcript, setTranscript]     = useState('');
-
-  // If redirected from AnalyzePage with switchToUpload
-  useEffect(() => {
-    if (location.state?.switchToUpload) {
-      setActiveTab('upload');
-      // Clear the state so it doesn't re-trigger
-      window.history.replaceState({}, '');
-    }
-  }, [location.state]);
-
-  function analyzeUrl(e) {
-    e.preventDefault();
-    if (!url.trim()) return;
-    navigate('/analyze', { state: { type: 'url', url: url.trim() } });
-  }
-
-  function analyzeUpload(e) {
-    e.preventDefault();
-    if (!selectedFile) return;
-    navigate('/analyze', { state: { type: 'upload', file: selectedFile } });
-  }
-
-  function analyzeText(e) {
-    e.preventDefault();
-    if (transcript.trim().length < 20) return;
-    navigate('/analyze', { state: { type: 'text', text: transcript.trim() } });
-  }
-
   return (
     <>
       <main>
-        <Hero
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          url={url}
-          setUrl={setUrl}
-          selectedFile={selectedFile}
-          setSelectedFile={setSelectedFile}
-          transcript={transcript}
-          setTranscript={setTranscript}
-          onAnalyzeUrl={analyzeUrl}
-          onAnalyzeUpload={analyzeUpload}
-          onAnalyzeText={analyzeText}
-        />
+        <Hero />
         <StatsSection />
         <TrendingSection />
         <LeaderboardSection />

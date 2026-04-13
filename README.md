@@ -53,6 +53,9 @@ Paste a short-form video link, upload a file, or paste a transcript and Unreel w
 	- top findings with confidence/recency
 	- bias assessment summary
 7. Added homepage dashboard section to promote Telegram bot with direct CTA link.
+8. **UI Restructure**: Replaced the dashboard input card with a premium Landing Page intro section, featuring a "Start Analyzing" CTA button.
+9. **Analyze Page Refactor**: Moved all URL, Upload, and Transcript input forms into a dedicated, two-phase `/analyze` UI.
+10. **Refined Navigation**: Cleaned up the Navbar by removing in-page hash links (How it Works, Features) and updated Blog images to use reliable absolute URLs in production.
 
 ### Existing Improvements Already Present
 
@@ -222,8 +225,8 @@ The bot currently accepts public Telegram post links, Instagram Reels, and YouTu
 
 | Route           | Page                  |
 |-----------------|-----------------------|
-| `/`             | Dashboard (input form, stats, trending, leaderboard, blog) |
-| `/analyze`      | Analysis loading page (redirected on submit) |
+| `/`             | Landing Page (intro, stats, trending, leaderboard, blog) |
+| `/analyze`      | Analysis input form and loading page |
 | `/results/:id`  | Full analysis results |
 | `/history`      | Past analyses (authenticated users) |
 | `/login`        | Login page            |

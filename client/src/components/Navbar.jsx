@@ -73,13 +73,7 @@ export default function Navbar() {
           </button>
 
           <div className="nav-links">
-            {isHome && (
-              <>
-                <button type="button" className="nav-link-btn" onClick={() => goToSection('how-it-works')}>How it Works</button>
-                <button type="button" className="nav-link-btn" onClick={() => goToSection('features')}>Features</button>
-                <button type="button" className="nav-link-btn" onClick={() => goToSection('trending')}>Trending</button>
-              </>
-            )}
+            <Link to="/analyze" className="nav-link-btn nav-link-btn-analyze">Analyze</Link>
             <Link to="/blog" className="nav-link-btn">Blog</Link>
             <Link to="/telegram-bot" className="nav-link-btn nav-link-btn-telegram">
               <TelegramIcon />
@@ -140,18 +134,12 @@ export default function Navbar() {
 
       {mobileOpen && (
         <div className="mobile-nav-panel">
+          <Link to="/analyze" className="mobile-nav-link mobile-nav-link-analyze">Analyze</Link>
           <Link to="/telegram-bot" className="mobile-nav-link mobile-nav-link-telegram">
             <TelegramIcon />
             Telegram Bot
           </Link>
           <Link to="/blog" className="mobile-nav-link">Blog</Link>
-          {isHome && (
-            <>
-              <button type="button" className="mobile-nav-link" onClick={() => goToSection('trending')}>Trending</button>
-              <button type="button" className="mobile-nav-link" onClick={() => goToSection('how-it-works')}>How it Works</button>
-              <button type="button" className="mobile-nav-link" onClick={() => goToSection('features')}>Features</button>
-            </>
-          )}
 
           {!isAuthenticated && (
             <div className="mobile-auth-links">

@@ -21,7 +21,7 @@ const blogs = [
     author: 'Unreel Team',
     category: 'Fake News Analysis',
     tags: ['viral', 'misinformation', 'instagram', 'health claims'],
-    featuredImage: '/blog/viral-reel.png',
+    featuredImage: 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=800&q=80&auto=format',
     featured: true,
     content: `## The Viral Claim
 
@@ -69,7 +69,7 @@ Health misinformation on social media can have real consequences. When people av
     author: 'Unreel Team',
     category: 'Social Media Trends',
     tags: ['health', 'instagram', 'fake claims', 'top 10'],
-    featuredImage: '/blog/health-claims.png',
+    featuredImage: 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=800&q=80&auto=format',
     content: `## The State of Health Misinformation
 
 Instagram Reels has become a breeding ground for health misinformation. With short, engaging videos that can reach millions in hours, false health claims spread faster than ever before.
@@ -137,7 +137,7 @@ Use Unreel to verify any health claim before sharing it. Our AI analyzes the act
     author: 'Unreel Team',
     category: 'AI & Misinformation',
     tags: ['AI', 'bias detection', 'technology', 'LLM'],
-    featuredImage: '/blog/ai-bias.png',
+    featuredImage: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&q=80&auto=format',
     content: `## Understanding Bias Detection
 
 Bias in content isn't always obvious. It can be subtle — a particular framing of facts, selective emphasis, emotional manipulation through music or visuals, or rhetorical techniques designed to persuade rather than inform.
@@ -207,7 +207,7 @@ Paste any reel URL on the Unreel homepage and see our bias analysis in action. T
     author: 'Unreel Team',
     category: 'Platform Updates',
     tags: ['truth score', 'how it works', 'scoring', 'methodology'],
-    featuredImage: '/blog/truth-score.png',
+    featuredImage: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&q=80&auto=format',
     content: `## What Is a Truth Score?
 
 The Truth Score is Unreel's primary metric for content reliability. It represents how factually accurate and trustworthy the content of a reel is, based on our AI analysis.
@@ -266,7 +266,7 @@ The Truth Score is a **starting point**, not a final verdict. We encourage users
     author: 'Unreel Team',
     category: 'AI & Misinformation',
     tags: ['AI', 'deepfakes', 'social media', 'synthetic content'],
-    featuredImage: '/blog/ai-misinfo.png',
+    featuredImage: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=800&q=80&auto=format',
     content: `## The New Wave of Misinformation
 
 The misinformation landscape is evolving rapidly. AI tools that were once only available to researchers are now accessible to anyone. This has led to a new generation of synthetic content that's harder to detect:
@@ -325,7 +325,7 @@ The fight against AI-generated misinformation requires AI-powered defenses. That
     author: 'Unreel Team',
     category: 'Case Studies',
     tags: ['case study', 'viral content', 'health', 'misinformation tracking'],
-    featuredImage: '/blog/case-study.png',
+    featuredImage: 'https://images.unsplash.com/photo-1504711434969-e33886168d9c?w=800&q=80&auto=format',
     content: `## The Beginning
 
 In early 2026, a 28-second Instagram Reel appeared from an anonymous account. It featured dramatic music, a person in a white coat (not a real doctor), and bold claims about a "banned" natural remedy.

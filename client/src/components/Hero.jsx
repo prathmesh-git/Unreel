@@ -1,4 +1,6 @@
-import { Link2, Upload, Film, ArrowRight, FileText } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { ArrowRight, ShieldCheck, Zap, Globe, BarChart2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const PLATFORM_ICONS = {
   youtube: (
@@ -25,132 +27,99 @@ const PLATFORM_ICONS = {
   ),
 };
 
-export default function Hero({
-  activeTab, setActiveTab, url, setUrl,
-  selectedFile, setSelectedFile,
-  transcript, setTranscript,
-  onAnalyzeUrl, onAnalyzeUpload, onAnalyzeText,
-}) {
-  function handleDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
-  function handleDragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
-  function handleDrop(e) {
-    e.preventDefault(); e.currentTarget.classList.remove('drag-over');
-    const file = e.dataTransfer.files[0];
-    if (file && (file.type.startsWith('video/') || file.type.startsWith('audio/'))) setSelectedFile(file);
+const HIGHLIGHTS = [
+  { Icon: ShieldCheck, title: 'Fact Verdicts', desc: 'TRUE / FALSE / MISLEADING verdicts sourced from WHO, Reuters & more.' },
+  { Icon: BarChart2, title: 'Bias Detection', desc: 'AI-powered bias scoring on a 0-100 scale with type identification.' },
+  { Icon: Globe, title: 'Multi-Platform', desc: 'Works with YouTube Shorts, Instagram Reels, TikTok & Twitter/X.' },
+  { Icon: Zap, title: 'Under 60 Seconds', desc: 'Paste a link and get a full analysis report in under a minute.' },
+];
+
+export default function Hero() {
+  const navigate = useNavigate();
+  const [transitioning, setTransitioning] = useState(false);
+  const btnRef = useRef(null);
+  const [ripplePos, setRipplePos] = useState({ x: '50%', y: '50%' });
+
+  function handleCtaClick() {
+    if (transitioning) return;
+    const btn = btnRef.current;
+    if (btn) {
+      const rect = btn.getBoundingClientRect();
+      setRipplePos({
+        x: `${rect.left + rect.width / 2}px`,
+        y: `${rect.top + rect.height / 2}px`,
+      });
+    }
+    setTransitioning(true);
+    setTimeout(() => navigate('/analyze'), 650);
   }
 
   return (
-    <section className="hero" aria-labelledby="hero-title">
-      <div className="hero-badge">
-        <span className="pulse-dot" aria-hidden="true" />
-        AI-Powered Fact Checking
-      </div>
+    <>
+      {/* Page transition overlay */}
+      {transitioning && (
+        <div
+          className="page-transition-overlay"
+          style={{ '--ripple-x': ripplePos.x, '--ripple-y': ripplePos.y }}
+          aria-hidden="true"
+        >
+          <div className="page-transition-ripple" />
+        </div>
+      )}
 
-      <h1 id="hero-title" className="hero-title">
-        Reveal the Truth<br />
-        <span className="gradient-text">Behind Every Reel</span>
-      </h1>
-
-      <p className="hero-subtitle">
-        Paste a URL, upload a video, or add a transcript.<br />
-        Our AI analyzes claims, checks facts, and detects bias — in seconds.
-      </p>
-
-      {/* Analyze Card */}
-      <div className="analyze-card">
-        <div className="tabs" role="tablist">
-          <button
-            className={`tab ${activeTab === 'url' ? 'active' : ''}`}
-            role="tab" aria-selected={activeTab === 'url'}
-            onClick={() => setActiveTab('url')}
-          >
-            <Link2 className="icon-sm" /> Paste URL
-          </button>
-          <button
-            className={`tab ${activeTab === 'upload' ? 'active' : ''}`}
-            role="tab" aria-selected={activeTab === 'upload'}
-            onClick={() => setActiveTab('upload')}
-          >
-            <Upload className="icon-sm" /> Upload Video
-          </button>
-          <button
-            className={`tab ${activeTab === 'text' ? 'active' : ''}`}
-            role="tab" aria-selected={activeTab === 'text'}
-            onClick={() => setActiveTab('text')}
-          >
-            <FileText className="icon-sm" /> Paste Transcript
-          </button>
+      <section className="hero" aria-labelledby="hero-title">
+        <div className="hero-badge">
+          <span className="pulse-dot" aria-hidden="true" />
+          AI-Powered Fact Checking
         </div>
 
-        {activeTab === 'url' && (
-          <form onSubmit={onAnalyzeUrl}>
-            <div className="input-group">
-              <div className="input-wrapper">
-                <span className="input-icon"><Link2 className="icon-sm" /></span>
-                <input
-                  type="url" className="url-input" value={url}
-                  onChange={e => setUrl(e.target.value)}
-                  placeholder="https://www.instagram.com/reel/..."
-                  aria-label="Video URL" required
-                />
+        <h1 id="hero-title" className="hero-title">
+          Reveal the Truth<br />
+          <span className="gradient-text">Behind Every Reel</span>
+        </h1>
+
+        <p className="hero-subtitle">
+          Paste a URL, upload a video, or add a transcript.<br />
+          Our AI analyzes claims, checks facts, and detects bias — in seconds.
+        </p>
+
+        {/* CTA Button */}
+        <button
+          ref={btnRef}
+          className={`hero-cta-btn ${transitioning ? 'cta-pressed' : ''}`}
+          onClick={handleCtaClick}
+          id="hero-cta"
+        >
+          <span className="hero-cta-content">
+            Start Analyzing
+            <ArrowRight className="icon-sm" />
+          </span>
+          <span className="hero-cta-glow" aria-hidden="true" />
+        </button>
+
+        {/* Platform badges */}
+        <div className="platform-badges" aria-label="Supported platforms">
+          <span className="platform-badge yt">{PLATFORM_ICONS.youtube} YouTube</span>
+          <span className="platform-badge ig">{PLATFORM_ICONS.instagram} Instagram</span>
+          <span className="platform-badge tt">{PLATFORM_ICONS.tiktok} TikTok</span>
+          <span className="platform-badge tw">{PLATFORM_ICONS.twitter} Twitter/X</span>
+        </div>
+
+        {/* Feature Highlights */}
+        <div className="hero-highlights">
+          {HIGHLIGHTS.map(({ Icon, title, desc }) => (
+            <div className="hero-highlight-card" key={title}>
+              <div className="hero-highlight-icon">
+                <Icon className="icon-lg" />
               </div>
-              <button type="submit" className="analyze-btn">
-                <span className="btn-content">Analyze URL <ArrowRight className="icon-sm" /></span>
-              </button>
+              <div>
+                <h3 className="hero-highlight-title">{title}</h3>
+                <p className="hero-highlight-desc">{desc}</p>
+              </div>
             </div>
-            <p className="input-hint">YouTube Shorts · Instagram Reels · TikTok · Twitter/X</p>
-          </form>
-        )}
-
-        {activeTab === 'upload' && (
-          <form onSubmit={onAnalyzeUpload}>
-            <div
-              className="upload-area"
-              onClick={() => document.getElementById('file-input').click()}
-              onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}
-              role="button" tabIndex={0} aria-label="Upload video"
-            >
-              <div className="upload-area-icon"><Film className="icon-2xl" /></div>
-              <p className="upload-text">Click to upload or drag & drop</p>
-              <p className="upload-hint">MP4, MOV, AVI · Max 100MB</p>
-              {selectedFile && <p className="upload-selected">{selectedFile.name}</p>}
-            </div>
-            <input id="file-input" type="file" accept="video/*,audio/*" style={{ display: 'none' }}
-              onChange={e => setSelectedFile(e.target.files[0])} />
-            <button type="submit" className="analyze-btn full-width" disabled={!selectedFile}>
-              <span className="btn-content">Analyze Video <ArrowRight className="icon-sm" /></span>
-            </button>
-          </form>
-        )}
-
-        {activeTab === 'text' && (
-          <form onSubmit={onAnalyzeText}>
-            <div className="input-group vertical">
-              <textarea
-                className="transcript-input"
-                value={transcript}
-                onChange={e => setTranscript(e.target.value)}
-                placeholder="Paste the video transcript or any text you want fact-checked…"
-                aria-label="Transcript text"
-                rows={6}
-                required
-              />
-              <button type="submit" className="analyze-btn full-width" disabled={transcript.trim().length < 20}>
-                <span className="btn-content">Analyze Text <ArrowRight className="icon-sm" /></span>
-              </button>
-            </div>
-            <p className="input-hint">Paste a video transcript, article snippet, or any content to fact-check.</p>
-          </form>
-        )}
-      </div>
-
-      {/* Platform badges */}
-      <div className="platform-badges" aria-label="Supported platforms">
-        <span className="platform-badge yt">{PLATFORM_ICONS.youtube} YouTube</span>
-        <span className="platform-badge ig">{PLATFORM_ICONS.instagram} Instagram</span>
-        <span className="platform-badge tt">{PLATFORM_ICONS.tiktok} TikTok</span>
-        <span className="platform-badge tw">{PLATFORM_ICONS.twitter} Twitter/X</span>
-      </div>
-    </section>
+          ))}
+        </div>
+      </section>
+    </>
   );
 }
