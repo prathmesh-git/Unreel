@@ -21,7 +21,7 @@ const blogs = [
     author: 'Unreel Team',
     category: 'Fake News Analysis',
     tags: ['viral', 'misinformation', 'instagram', 'health claims'],
-    featuredImage: 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=800&q=80&auto=format',
+    featuredImage: 'https://images.unsplash.com/photo-1724862936518-ae7fcfc052c1?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
     featured: true,
     content: `## The Viral Claim
 
@@ -325,7 +325,7 @@ The fight against AI-generated misinformation requires AI-powered defenses. That
     author: 'Unreel Team',
     category: 'Case Studies',
     tags: ['case study', 'viral content', 'health', 'misinformation tracking'],
-    featuredImage: 'https://images.unsplash.com/photo-1504711434969-e33886168d9c?w=800&q=80&auto=format',
+    featuredImage: 'https://plus.unsplash.com/premium_photo-1681996336639-ad2b31aeac11?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8bW9iaWxlJTIwcGhvbmUlMjBkb2N0ZXJ8ZW58MHx8MHx8fDA%3D',
     content: `## The Beginning
 
 In early 2026, a 28-second Instagram Reel appeared from an anonymous account. It featured dramatic music, a person in a white coat (not a real doctor), and bold claims about a "banned" natural remedy.

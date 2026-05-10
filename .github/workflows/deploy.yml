@@ -1,0 +1,24 @@
+name: Deploy to Render
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  redeploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger Render Deployment
+        run: |
+          response=$(curl -s -o response.txt -w "%{http_code}" \
+          -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}")
+
+          echo "HTTP Status: $response"
+          cat response.txt
+
+          if [ "$response" -ne 200 ]; then
+            echo "Deployment trigger failed"
+            exit 1
+          fi
