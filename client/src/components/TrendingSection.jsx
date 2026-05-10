@@ -1,58 +1,28 @@
 import { useState, useEffect } from 'react';
-import { Flame, ArrowRight } from 'lucide-react';
+import { Newspaper, ExternalLink, Clock, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-function TruthScoreGauge({ score }) {
-  const radius = 18;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (score / 100) * circumference;
+function formatTimeAgo(dateString) {
+  if (!dateString) return '';
+  const now = new Date();
+  const published = new Date(dateString);
+  const diffMs = now - published;
+  const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffHrs / 24);
 
-  const getColor = (s) => {
-    if (s >= 70) return 'var(--true-color)';
-    if (s >= 40) return 'var(--misleading-color)';
-    return 'var(--false-color)';
-  };
-
-  return (
-    <div className="truth-gauge">
-      <svg width="48" height="48" viewBox="0 0 48 48">
-        <circle cx="24" cy="24" r={radius} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="3" />
-        <circle
-          cx="24" cy="24" r={radius} fill="none"
-          stroke={getColor(score)} strokeWidth="3"
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          transform="rotate(-90 24 24)"
-          style={{ transition: 'stroke-dashoffset 1.2s cubic-bezier(0.22,1,0.36,1)' }}
-        />
-      </svg>
-      <span className="truth-gauge-value" style={{ color: getColor(score) }}>
-        {score != null ? `${score}%` : '—'}
-      </span>
-    </div>
-  );
-}
-
-function BiasLevelBadge({ level }) {
-  const cls = {
-    High: 'bias-badge-high',
-    Medium: 'bias-badge-medium',
-    Low: 'bias-badge-low',
-    HIGH: 'bias-badge-high',
-    MEDIUM: 'bias-badge-medium',
-    LOW: 'bias-badge-low',
-  }[level] || 'bias-badge-medium';
-
-  return <span className={`bias-badge ${cls}`}>{level}</span>;
+  if (diffDays > 0) return `${diffDays}d ago`;
+  if (diffHrs > 0) return `${diffHrs}h ago`;
+  const diffMins = Math.floor(diffMs / (1000 * 60));
+  return diffMins > 0 ? `${diffMins}m ago` : 'Just now';
 }
 
 export default function TrendingSection() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [imgErrors, setImgErrors] = useState({});
 
   useEffect(() => {
-    fetch('/api/trending?limit=6')
+    fetch('/api/news?limit=6')
       .then((r) => r.json())
       .then((data) => {
         if (data.success) setItems(data.items);
@@ -61,45 +31,68 @@ export default function TrendingSection() {
       .finally(() => setLoading(false));
   }, []);
 
+  function handleImgError(id) {
+    setImgErrors((prev) => ({ ...prev, [id]: true }));
+  }
+
   if (loading || items.length === 0) return null;
 
   return (
     <section className="trending-section" id="trending" aria-labelledby="trending-title">
       <div className="trending-header">
         <h2 id="trending-title" className="section-title">
-          <Flame className="icon-lg" style={{ color: 'var(--false-color)', display: 'inline', verticalAlign: 'middle', marginRight: '0.4rem' }} />
-          Trending Now
+          <Newspaper className="icon-lg" style={{ color: 'var(--false-color)', display: 'inline', verticalAlign: 'middle', marginRight: '0.4rem' }} />
+          Trending News
         </h2>
-        <p className="section-subtitle">Viral content and misinformation topics being discussed right now</p>
+        <p className="section-subtitle">Latest news on misinformation, fact-checking, and media literacy — updated daily</p>
       </div>
       <div className="trending-grid">
         {items.map((item, i) => (
-          <div
+          <a
             className="trending-card"
             key={item.id}
+            href={item.url}
+            target="_blank"
+            rel="noopener noreferrer"
             style={{ animationDelay: `${i * 0.08}s` }}
           >
-            <div className="trending-card-rank">#{i + 1}</div>
+            {/* Thumbnail */}
+            <div className="trending-card-thumb">
+              {item.image && !imgErrors[item.id] ? (
+                <img
+                  src={item.image}
+                  alt=""
+                  loading="lazy"
+                  onError={() => handleImgError(item.id)}
+                />
+              ) : (
+                <div className="trending-card-thumb-placeholder">
+                  <Newspaper className="icon-lg" />
+                </div>
+              )}
+            </div>
+
             <div className="trending-card-body">
+              <div className="trending-card-source-row">
+                <span className="trending-card-source">{item.source}</span>
+                <span className="trending-card-time">
+                  <Clock className="icon-xs" />
+                  {formatTimeAgo(item.publishedAt)}
+                </span>
+              </div>
               <h3 className="trending-card-title">{item.title}</h3>
               <p className="trending-card-desc">{item.description}</p>
-              <div className="trending-card-meta">
-                <div className="trending-card-scores">
-                  <TruthScoreGauge score={item.truthScore} />
-                  <div className="trending-card-score-labels">
-                    <span>Truth Score: {item.truthScore != null ? `${item.truthScore}%` : 'N/A'}</span>
-                    <BiasLevelBadge level={item.biasLevel} />
-                  </div>
-                </div>
-                {item.analysisId && (
-                  <Link to={`/results/${item.analysisId}`} className="trending-card-link">
-                    View <ArrowRight className="icon-sm" />
-                  </Link>
-                )}
-              </div>
+              <span className="trending-card-read-more">
+                Read Article <ExternalLink className="icon-xs" />
+              </span>
             </div>
-          </div>
+          </a>
         ))}
+      </div>
+      <div className="trending-section-cta">
+        <Link to="/news" className="trending-view-all-btn" id="news-view-all">
+          View All News <ArrowRight className="icon-sm" />
+        </Link>
       </div>
     </section>
   );

@@ -29,33 +29,36 @@ Paste a short-form video link, upload a file, or paste a transcript and Unreel w
 
 ### Done
 
-1. **Content Platform Expansion**: Added a comprehensive Markdown-powered Blog system, carefully curated & auto-generated Trending Topics, a Most Analysed Leaderboard, and real-time Platform Statistics.
-2. Added Telegram bot integration in backend startup flow (`modules/telegramBot.js` + `server.js`).
-2. Added Telegram bot environment config (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_POLLING`, `TELEGRAM_ANALYZE_API_URL`).
-3. Expanded bot URL intake beyond Telegram links to include:
+1. **Content Platform Expansion**: Added a comprehensive Markdown-powered Blog system, real-time Platform Statistics, and a curated Insights section.
+2. **Live Trending News**: Replaced the static trending section with a live daily news feed powered by GNews API. News about misinformation, fact-checking, and media literacy is fetched automatically and cached for 24 hours. Includes a dedicated `/news` page with full article listings.
+3. **Blog Image Resilience**: Added graceful gradient fallback placeholders for blog images that fail to load in deployment (Unsplash rate limits, CORS, etc.).
+4. **Removed Leaderboard**: Removed the "Most Analysed Reels" leaderboard section from the homepage for a cleaner layout.
+5. Added Telegram bot integration in backend startup flow (`modules/telegramBot.js` + `server.js`).
+6. Added Telegram bot environment config (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_POLLING`, `TELEGRAM_ANALYZE_API_URL`).
+7. Expanded bot URL intake beyond Telegram links to include:
 	- Instagram `/reel/...` and `/reels/...`
 	- YouTube Shorts `/shorts/...` and `youtu.be/...`
-4. Improved bot UX with:
+8. Improved bot UX with:
 	- Better `/start` welcome and guided instructions
 	- `/help`, `/supported`, `/examples`, `/status` commands
 	- Persistent quick-action keyboard buttons
 	- Progress typing indicator while analysis runs
-5. Improved scenario handling messages for:
+9. Improved scenario handling messages for:
 	- invalid links
 	- unsupported links
 	- multiple links in one message
 	- private/login-protected links
 	- timeouts and rate limits
 	- concurrent in-chat requests
-6. Reworked Telegram analysis output into a professional report format:
+10. Reworked Telegram analysis output into a professional report format:
 	- video overview
 	- fact-check summary + verdict breakdown
 	- top findings with confidence/recency
 	- bias assessment summary
-7. Added homepage dashboard section to promote Telegram bot with direct CTA link.
-8. **UI Restructure**: Replaced the dashboard input card with a premium Landing Page intro section, featuring a "Start Analyzing" CTA button.
-9. **Analyze Page Refactor**: Moved all URL, Upload, and Transcript input forms into a dedicated, two-phase `/analyze` UI.
-10. **Refined Navigation**: Cleaned up the Navbar by removing in-page hash links (How it Works, Features) and updated Blog images to use reliable absolute URLs in production.
+11. Added homepage dashboard section to promote Telegram bot with direct CTA link.
+12. **UI Restructure**: Replaced the dashboard input card with a premium Landing Page intro section, featuring a "Start Analyzing" CTA button.
+13. **Analyze Page Refactor**: Moved all URL, Upload, and Transcript input forms into a dedicated, two-phase `/analyze` UI.
+14. **Refined Navigation**: Cleaned up the Navbar by removing in-page hash links (How it Works, Features) and updated Blog images to use reliable absolute URLs in production.
 
 ### Existing Improvements Already Present
 
@@ -81,7 +84,7 @@ Paste a short-form video link, upload a file, or paste a transcript and Unreel w
 | Backend   | Node.js, Express                                |
 | Auth      | JWT, Google OAuth, bcryptjs                     |
 | Database  | MongoDB, Mongoose                               |
-| AI/ML     | Groq Whisper (STT), Groq LLaMA 3.1 (LLM), Tavily (search) |
+| AI/ML     | Groq Whisper (STT), Groq LLaMA 3.1 (LLM), Tavily (search), GNews (news) |
 | Video     | yt-dlp (download), ffmpeg (keyframe extraction) |
 
 ---
@@ -94,10 +97,10 @@ unreel/
 │   ├── src/
 │   │   ├── components/      # Navbar, Hero, HowItWorks, Features, Footer,
 │   │   │                    # ResultsOverlay, ResultsPage, BlogSection,
-│   │   │                    # LeaderboardSection, StatsSection, TrendingSection
+│   │   │                    # StatsSection, TrendingSection
 │   │   ├── context/         # AuthContext (JWT + Google OAuth)
 │   │   ├── pages/           # AnalyzePage, HistoryPage, LoginPage, RegisterPage,
-│   │   │                    # BlogPage, BlogPostPage
+│   │   │                    # BlogPage, BlogPostPage, TrendingNewsPage
 │   │   ├── App.jsx
 │   │   ├── App.css
 │   │   └── main.jsx
@@ -122,6 +125,7 @@ unreel/
 │   ├── blog.js               # GET /api/blogs, /api/blogs/:slug
 │   ├── history.js            # GET / DELETE /api/history
 │   ├── leaderboard.js        # GET /api/top-analysed
+│   ├── news.js               # GET /api/news (GNews-powered daily feed)
 │   ├── trending.js           # GET /api/trending
 │   └── results.js            # GET  /api/results, /api/results/:id
 ├── .env.example
@@ -162,6 +166,7 @@ Fill in `.env`:
 ```env
 GROQ_API_KEY=your_groq_api_key          # Whisper transcription + LLaMA 3.1 (free)
 TAVILY_API_KEY=your_tavily_api_key      # Web search (free tier available)
+GNEWS_API_KEY=your_gnews_api_key        # Trending news feed (free: 100 req/day)
 MONGODB_URI=mongodb://127.0.0.1:27017/unreel
 JWT_SECRET=replace_with_a_strong_secret
 PORT=3000
@@ -225,7 +230,7 @@ The bot currently accepts public Telegram post links, Instagram Reels, and YouTu
 
 | Route           | Page                  |
 |-----------------|-----------------------|
-| `/`             | Landing Page (intro, stats, trending, leaderboard, blog) |
+| `/`             | Landing Page (intro, stats, trending news, blog) |
 | `/analyze`      | Analysis input form and loading page |
 | `/results/:id`  | Full analysis results |
 | `/history`      | Past analyses (authenticated users) |
@@ -233,6 +238,7 @@ The bot currently accepts public Telegram post links, Instagram Reels, and YouTu
 | `/register`     | Register page         |
 | `/blog`         | Blog listing page     |
 | `/blog/:slug`   | Individual blog post page |
+| `/news`         | Trending news feed (full page) |
 
 ---
 
@@ -247,6 +253,7 @@ The bot currently accepts public Telegram post links, Instagram Reels, and YouTu
 | GET    | `/api/results/:id`     | —        | Fetch a single analysis by ID      |
 | GET    | `/api/blogs`           | —        | Fetch blog posts (paginated)       |
 | GET    | `/api/blogs/:slug`     | —        | Fetch single blog post             |
+| GET    | `/api/news`            | —        | Fetch live trending news (GNews, 24h cache) |
 | GET    | `/api/trending`        | —        | Fetch trending content issues      |
 | GET    | `/api/top-analysed`    | —        | Fetch leaderboard (sortable)       |
 | GET    | `/api/history`         | Required | Fetch user's past analyses         |
@@ -265,6 +272,7 @@ The bot currently accepts public Telegram post links, Instagram Reels, and YouTu
 |---------|-----------|------|
 | Groq (Whisper + LLaMA 3.1) | Generous free tier | https://console.groq.com |
 | Tavily Search | 1,000 searches/month | https://tavily.com |
+| GNews | 100 requests/day | https://gnews.io |
 
 ---
 
@@ -300,6 +308,7 @@ git push origin main
 	|-----|-------|
 	| `GROQ_API_KEY` | your key |
 	| `TAVILY_API_KEY` | your key |
+	| `GNEWS_API_KEY` | your key (optional — trending news) |
 	| `MONGODB_URI` | your Atlas connection string |
 	| `JWT_SECRET` | a strong random secret |
 

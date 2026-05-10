@@ -15,6 +15,7 @@ const historyRoutes = require('./routes/history');
 const blogRoutes = require('./routes/blog');
 const trendingRoutes = require('./routes/trending');
 const leaderboardRoutes = require('./routes/leaderboard');
+const newsRoutes = require('./routes/news');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -58,6 +59,7 @@ app.use('/api/history', historyRoutes);
 app.use('/api/blogs', blogRoutes);
 app.use('/api/trending', trendingRoutes);
 app.use('/api/top-analysed', leaderboardRoutes);
+app.use('/api/news', newsRoutes);
 
 app.get('/api/health', (_req, res) => {
   res.json({

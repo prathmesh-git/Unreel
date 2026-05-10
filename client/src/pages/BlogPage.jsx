@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, ArrowRight, X } from 'lucide-react';
+import { Search, ArrowRight, X, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const CATEGORIES = [
@@ -11,14 +11,28 @@ const CATEGORIES = [
   'Platform Updates',
 ];
 
+function BlogImage({ src, alt, className }) {
+  const [failed, setFailed] = useState(false);
+
+  if (!src || failed) {
+    return (
+      <div className={`${className} blog-image-placeholder`}>
+        <BookOpen className="icon-lg" />
+      </div>
+    );
+  }
+
+  return (
+    <div className={className}>
+      <img src={src} alt={alt} loading="lazy" onError={() => setFailed(true)} />
+    </div>
+  );
+}
+
 function BlogListCard({ post }) {
   return (
     <Link to={`/blog/${post.slug}`} className="blog-list-card" id={`blog-list-${post.slug}`}>
-      {post.featuredImage && (
-        <div className="blog-list-card-image">
-          <img src={post.featuredImage} alt={post.title} loading="lazy" />
-        </div>
-      )}
+      <BlogImage src={post.featuredImage} alt={post.title} className="blog-list-card-image" />
       <div className="blog-list-card-body">
         <span className="blog-card-category">{post.category}</span>
         <h3 className="blog-list-card-title">{post.title}</h3>

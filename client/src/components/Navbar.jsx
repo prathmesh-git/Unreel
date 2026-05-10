@@ -75,6 +75,7 @@ export default function Navbar() {
           <div className="nav-links">
             <Link to="/analyze" className="nav-link-btn nav-link-btn-analyze">Analyze</Link>
             <Link to="/blog" className="nav-link-btn">Blog</Link>
+            <Link to="/news" className="nav-link-btn">News</Link>
             <Link to="/telegram-bot" className="nav-link-btn nav-link-btn-telegram">
               <TelegramIcon />
               Telegram Bot
@@ -135,12 +136,12 @@ export default function Navbar() {
       {mobileOpen && (
         <div className="mobile-nav-panel">
           <Link to="/analyze" className="mobile-nav-link mobile-nav-link-analyze">Analyze</Link>
+          <Link to="/blog" className="mobile-nav-link">Blog</Link>
+          <Link to="/news" className="mobile-nav-link">News</Link>
           <Link to="/telegram-bot" className="mobile-nav-link mobile-nav-link-telegram">
             <TelegramIcon />
             Telegram Bot
           </Link>
-          <Link to="/blog" className="mobile-nav-link">Blog</Link>
-
           {!isAuthenticated && (
             <div className="mobile-auth-links">
               <Link className="auth-nav-link" to="/login">Login</Link>

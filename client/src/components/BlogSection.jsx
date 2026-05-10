@@ -2,14 +2,28 @@ import { useState, useEffect } from 'react';
 import { ArrowRight, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+function BlogImage({ src, alt, className }) {
+  const [failed, setFailed] = useState(false);
+
+  if (!src || failed) {
+    return (
+      <div className={`${className} blog-image-placeholder`}>
+        <BookOpen className="icon-lg" />
+      </div>
+    );
+  }
+
+  return (
+    <div className={className}>
+      <img src={src} alt={alt} loading="lazy" onError={() => setFailed(true)} />
+    </div>
+  );
+}
+
 function BlogCard({ post }) {
   return (
     <Link to={`/blog/${post.slug}`} className="blog-card" id={`blog-card-${post.slug}`}>
-      {post.featuredImage && (
-        <div className="blog-card-image">
-          <img src={post.featuredImage} alt={post.title} loading="lazy" />
-        </div>
-      )}
+      <BlogImage src={post.featuredImage} alt={post.title} className="blog-card-image" />
       <div className="blog-card-body">
         <span className="blog-card-category">{post.category}</span>
         <h3 className="blog-card-title">{post.title}</h3>
@@ -61,12 +75,7 @@ export default function BlogSection() {
         {/* Featured Article */}
         {featured && (
           <Link to={`/blog/${featured.slug}`} className="blog-featured-card" id="blog-featured">
-            {featured.featuredImage && (
-              <div className="blog-featured-image">
-                <img src={featured.featuredImage} alt={featured.title} loading="lazy" />
-                <div className="blog-featured-overlay" />
-              </div>
-            )}
+            <BlogImage src={featured.featuredImage} alt={featured.title} className="blog-featured-image" />
             <div className="blog-featured-content">
               <span className="blog-card-category">{featured.category}</span>
               <h3 className="blog-featured-title">{featured.title}</h3>

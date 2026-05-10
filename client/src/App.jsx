@@ -3,7 +3,6 @@ import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import StatsSection from './components/StatsSection';
 import TrendingSection from './components/TrendingSection';
-import LeaderboardSection from './components/LeaderboardSection';
 import BlogSection from './components/BlogSection';
 import HowItWorks from './components/HowItWorks';
 import Features from './components/Features';
@@ -17,6 +16,7 @@ import HistoryPage from './pages/HistoryPage';
 import TelegramBotPage from './pages/TelegramBotPage';
 import BlogPage from './pages/BlogPage';
 import BlogPostPage from './pages/BlogPostPage';
+import TrendingNewsPage from './pages/TrendingNewsPage';
 
 function HomePage() {
   return (
@@ -25,7 +25,6 @@ function HomePage() {
         <Hero />
         <StatsSection />
         <TrendingSection />
-        <LeaderboardSection />
         <BlogSection />
         <HowItWorks />
         <Features />
@@ -59,6 +58,7 @@ export default function App() {
         <Route path="/telegram-bot" element={<TelegramBotPage />} />
         <Route path="/blog" element={<BlogPage />} />
         <Route path="/blog/:slug" element={<BlogPostPage />} />
+        <Route path="/news" element={<TrendingNewsPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 

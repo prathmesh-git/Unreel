@@ -1,12 +1,30 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Clock, Eye, Tag, ArrowRight, Loader2 } from 'lucide-react';
+import { ArrowLeft, Clock, Eye, Tag, ArrowRight, Loader2, BookOpen } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
 function estimateReadTime(content) {
   const words = content.split(/\s+/).length;
   return Math.max(1, Math.ceil(words / 200));
+}
+
+function BlogImage({ src, alt, className }) {
+  const [failed, setFailed] = useState(false);
+
+  if (!src || failed) {
+    return (
+      <div className={`${className} blog-image-placeholder`}>
+        <BookOpen className="icon-lg" />
+      </div>
+    );
+  }
+
+  return (
+    <div className={className}>
+      <img src={src} alt={alt} onError={() => setFailed(true)} />
+    </div>
+  );
 }
 
 export default function BlogPostPage() {
@@ -90,11 +108,7 @@ export default function BlogPostPage() {
         </div>
 
         {/* Featured Image */}
-        {post.featuredImage && (
-          <div className="blogpost-featured-image">
-            <img src={post.featuredImage} alt={post.title} />
-          </div>
-        )}
+        <BlogImage src={post.featuredImage} alt={post.title} className="blogpost-featured-image" />
 
         {/* Content */}
         <div className="blogpost-content">
@@ -146,11 +160,7 @@ export default function BlogPostPage() {
           <div className="blogpost-related-grid">
             {related.map((r) => (
               <Link to={`/blog/${r.slug}`} className="blogpost-related-card" key={r.id}>
-                {r.featuredImage && (
-                  <div className="blogpost-related-image">
-                    <img src={r.featuredImage} alt={r.title} loading="lazy" />
-                  </div>
-                )}
+                <BlogImage src={r.featuredImage} alt={r.title} className="blogpost-related-image" />
                 <div className="blogpost-related-body">
                   <span className="blog-card-category">{r.category}</span>
                   <h3>{r.title}</h3>
