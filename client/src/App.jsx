@@ -17,6 +17,7 @@ import TelegramBotPage from './pages/TelegramBotPage';
 import BlogPage from './pages/BlogPage';
 import BlogPostPage from './pages/BlogPostPage';
 import TrendingNewsPage from './pages/TrendingNewsPage';
+import MiniPortfolio from './components/MiniPortfolio';
 
 function HomePage() {
   return (
@@ -47,6 +48,7 @@ export default function App() {
       </div>
 
       <Navbar />
+      <MiniPortfolio />
 
       <Routes>
         <Route path="/" element={<HomePage />} />

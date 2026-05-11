@@ -29,10 +29,11 @@ Paste a short-form video link, upload a file, or paste a transcript and Unreel w
 
 ### Done
 
-1. **Content Platform Expansion**: Added a comprehensive Markdown-powered Blog system, real-time Platform Statistics, and a curated Insights section.
-2. **Live Trending News**: Replaced the static trending section with a live daily news feed powered by GNews API. News about misinformation, fact-checking, and media literacy is fetched automatically and cached for 24 hours. Includes a dedicated `/news` page with full article listings.
-3. **Blog Image Resilience**: Added graceful gradient fallback placeholders for blog images that fail to load in deployment (Unsplash rate limits, CORS, etc.).
-4. **Removed Leaderboard**: Removed the "Most Analysed Reels" leaderboard section from the homepage for a cleaner layout.
+1. **Mini Portfolio Widget**: Added an animated, interactive mini-portfolio floating widget (fixed top-right). Built with framer-motion, featuring 4 animated states (collapsed → expanded → bio → menu) with social links (GitHub, LinkedIn, Twitter/X, CV). Converted from a Next.js/Tailwind/TypeScript source to Vite/vanilla-CSS/JSX.
+2. **Content Platform Expansion**: Added a comprehensive Markdown-powered Blog system, real-time Platform Statistics, and a curated Insights section.
+3. **Live Trending News**: Replaced the static trending section with a live daily news feed powered by GNews API. News about misinformation, fact-checking, and media literacy is fetched automatically and cached for 24 hours. Includes a dedicated `/news` page with full article listings.
+4. **Blog Image Resilience**: Added graceful gradient fallback placeholders for blog images that fail to load in deployment (Unsplash rate limits, CORS, etc.).
+5. **Removed Leaderboard**: Removed the "Most Analysed Reels" leaderboard section from the homepage for a cleaner layout.
 5. Added Telegram bot integration in backend startup flow (`modules/telegramBot.js` + `server.js`).
 6. Added Telegram bot environment config (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_POLLING`, `TELEGRAM_ANALYZE_API_URL`).
 7. Expanded bot URL intake beyond Telegram links to include:
@@ -80,7 +81,7 @@ Paste a short-form video link, upload a file, or paste a transcript and Unreel w
 
 | Layer     | Technology                                      |
 |-----------|-------------------------------------------------|
-| Frontend  | React 18, Vite, React Router, Lucide Icons      |
+| Frontend  | React 18, Vite, React Router, Lucide Icons, Framer Motion |
 | Backend   | Node.js, Express                                |
 | Auth      | JWT, Google OAuth, bcryptjs                     |
 | Database  | MongoDB, Mongoose                               |
@@ -97,7 +98,7 @@ unreel/
 │   ├── src/
 │   │   ├── components/      # Navbar, Hero, HowItWorks, Features, Footer,
 │   │   │                    # ResultsOverlay, ResultsPage, BlogSection,
-│   │   │                    # StatsSection, TrendingSection
+│   │   │                    # StatsSection, TrendingSection, MiniPortfolio
 │   │   ├── context/         # AuthContext (JWT + Google OAuth)
 │   │   ├── pages/           # AnalyzePage, HistoryPage, LoginPage, RegisterPage,
 │   │   │                    # BlogPage, BlogPostPage, TrendingNewsPage
