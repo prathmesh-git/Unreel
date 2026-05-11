@@ -1,9 +1,10 @@
 import { ArrowLeft, BookText, Github, Layers3, Plus, Twitter } from 'lucide-react';
 import { AnimatePresence, motion, useAnimation } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
+import profileImg from '../assets/profile.jpg';
 
 const PORTFOLIO_CONFIG = {
-  image: '/profile.jpg',
+  image: profileImg,
   firstName: 'Prathmesh',
   experience: 1,
   domain: 'web development',

@@ -1,0 +1,13 @@
+<svg version="1.2" baseProfile="tiny-ps" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <title>Unreel</title>
+  <rect x="0" y="0" width="512" height="512" rx="112" fill="#07070f"/>
+  <g fill="none" stroke="#a78bfa" stroke-width="30" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="256" cy="256" r="168"/>
+    <line x1="294.81" y1="188.00" x2="391.27" y2="355.00"/>
+    <line x1="217.19" y1="188.00" x2="410.00" y2="188.00"/>
+    <line x1="178.38" y1="256.00" x2="274.84" y2="89.00"/>
+    <line x1="217.19" y1="324.00" x2="120.73" y2="157.00"/>
+    <line x1="294.81" y1="324.00" x2="102.00" y2="324.00"/>
+    <line x1="333.62" y1="256.00" x2="237.16" y2="423.00"/>
+  </g>
+</svg>
