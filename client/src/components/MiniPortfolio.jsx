@@ -237,8 +237,7 @@ export default function MiniPortfolio() {
               <span className="mp-bio-hl">&ldquo;value instead of mindless execution&rdquo;</span>.
               It&apos;s easy to print generic solutions, but what we{' '}
               {config.role} are hired for is our unique point of view and creative
-              thinking. Usability combined with aesthetics is the key to memorable
-              and&nbsp;enjoyable products.
+              thinking. Usability combined with aesthetics is the key.
             </p>
           </div>
         </motion.div>

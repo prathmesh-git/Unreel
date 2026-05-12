@@ -23,6 +23,7 @@ function HomePage() {
   return (
     <>
       <main>
+        <MiniPortfolio />
         <Hero />
         <StatsSection />
         <TrendingSection />
@@ -48,7 +49,6 @@ export default function App() {
       </div>
 
       <Navbar />
-      <MiniPortfolio />
 
       <Routes>
         <Route path="/" element={<HomePage />} />
