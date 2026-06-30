@@ -123,6 +123,13 @@ export default function ResultsPage() {
   } = result;
   const hasCaptions = typeof captions === 'string' && captions.trim().length > 0;
 
+  // Compute verdict summary counts
+  const verdictCounts = factChecks.reduce((acc, fc) => {
+    const v = (fc.verdict || 'UNVERIFIED').toUpperCase();
+    acc[v] = (acc[v] || 0) + 1;
+    return acc;
+  }, {});
+
   return (
     <div className="results-page">
       <div className="results-panel">
@@ -151,6 +158,18 @@ export default function ResultsPage() {
           </div>
         </div>
 
+        {/* Verdict Summary Banner */}
+        {factChecks.length > 0 && (
+          <div className="verdict-summary-banner">
+            <span className="verdict-summary-label">Overview</span>
+            <div className="verdict-summary-counts">
+              {verdictCounts.TRUE > 0 && <span className="verdict-summary-item verdict-true">{verdictCounts.TRUE} True</span>}
+              {verdictCounts.FALSE > 0 && <span className="verdict-summary-item verdict-false">{verdictCounts.FALSE} False</span>}
+              {verdictCounts.MISLEADING > 0 && <span className="verdict-summary-item verdict-misleading">{verdictCounts.MISLEADING} Misleading</span>}
+              {verdictCounts.UNVERIFIED > 0 && <span className="verdict-summary-item verdict-unverified">{verdictCounts.UNVERIFIED} Unverified</span>}
+            </div>
+          </div>
+        )}
         {/* On-Screen Text */}
         {onScreenText && (
           <CollapsibleCard icon={ImageIcon} label="On-Screen Text Detected">

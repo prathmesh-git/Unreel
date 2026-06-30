@@ -222,40 +222,60 @@ function getDownloadHint(url, rawError = '') {
   const platform = detectPlatform(url);
   const details = rawError.toLowerCase();
 
+  // Extract category from the structured error if available
+  const categoryMatch = rawError.match(/Category:\s*(\w+)/);
+  const category = categoryMatch ? categoryMatch[1] : '';
+
+  // Category-based hints (most specific)
+  if (category === 'RATE_LIMITED') {
+    if (platform === 'YouTube') {
+      return 'YouTube is rate-limiting download requests from this server. Please wait a few minutes and try again, or upload the video file directly.';
+    }
+    if (platform === 'Instagram') {
+      return 'Instagram is temporarily blocking download requests. Wait a minute and try again, or upload the reel file directly.';
+    }
+    return 'This platform is temporarily rate-limiting automated downloads. Please retry in a few minutes or upload the file directly.';
+  }
+
+  if (category === 'PRIVATE_OR_LOGIN') {
+    if (platform === 'Instagram') {
+      return 'This reel appears to be private or login-protected. Make sure the post is public, or upload the video file directly.';
+    }
+    return 'This content requires login or is set to private. Please ensure the link is publicly accessible, or upload the file directly.';
+  }
+
+  if (category === 'FORMAT_UNAVAILABLE') {
+    return 'The video format is temporarily unavailable on this platform. Please retry in a moment or upload the file directly.';
+  }
+
+  if (category === 'NETWORK_ERROR') {
+    return 'A network error occurred while downloading. Please check your connection and try again.';
+  }
+
+  if (category === 'INVALID_URL') {
+    return 'This URL doesn\'t appear to be a valid video link. Please double-check the URL and try again.';
+  }
+
+  // Platform-based fallback hints
   if (platform === 'YouTube') {
-    if (details.includes('sign in to confirm') || details.includes('bot') || details.includes('429') || details.includes('too many requests')) {
-      return 'YouTube is blocking or rate-limiting this cloud download request right now. Please retry later or upload the file directly.';
+    if (details.includes('sign in to confirm') || details.includes('bot') || details.includes('429')) {
+      return 'YouTube is blocking or rate-limiting this download request. Please retry later or upload the file directly.';
     }
     return 'YouTube could not be downloaded from this server right now. Please retry later or upload the video file directly.';
   }
 
-  if (details.includes('login required') || details.includes('private')) {
-    return 'This post appears private/login-protected, or Instagram is blocking unauthenticated cloud requests for this link. Open a fully public reel URL and try again, or upload the file directly.';
-  }
-
-  if (platform === 'Instagram' && (details.includes('cookies-from-browser') || details.includes('cookies'))) {
-    return 'Instagram may require an active logged-in browser session. Log in to Instagram in Chrome/Edge on this machine and try again.';
-  }
-
-  if (details.includes('requested format is not available')) {
-    return 'The reel format is unavailable right now. Please retry in a moment or upload the file directly.';
-  }
-
-  if (details.includes('sign in to confirm') || details.includes('bot') || details.includes('429') || details.includes('too many requests')) {
-    return 'This platform is blocking or rate-limiting automated cloud downloads for this link right now. Please retry later or upload the file directly.';
-  }
-
   if (platform === 'Instagram') {
-    return 'Instagram blocks some reels depending on account visibility and anti-bot checks. Try again after logging in to Instagram in your browser, or upload the file directly.';
+    if (details.includes('login required') || details.includes('private')) {
+      return 'This reel appears private or login-protected. Make sure the post is public, or upload the file directly.';
+    }
+    return 'Instagram blocks some reels depending on account visibility. Try again later, or upload the file directly.';
   }
-  if (platform === 'YouTube') {
-    return 'YouTube may be blocking or rate-limiting this cloud download request. Please try again later or upload the video file directly.';
-  }
+
   if (platform === 'TikTok') {
-    return 'TikTok may restrict downloads. Please try uploading the video file instead.';
+    return 'TikTok may restrict automated downloads. Please try uploading the video file instead.';
   }
   if (platform === 'Telegram') {
-    return 'Telegram links must be public channel post URLs. Private channel/group links cannot be downloaded by the server.';
+    return 'Telegram links must be public channel post URLs. Private channel/group links cannot be downloaded.';
   }
   return 'Please try uploading the video file instead.';
 }

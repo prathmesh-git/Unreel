@@ -12,6 +12,14 @@ const MEDIA_EXTENSIONS = new Set(['.mp4', '.mkv', '.webm', '.mov', '.m4v', '.avi
 let resolvedInstagramCookiesFile = null;
 let resolvedYtDlpCookiesFile = null;
 
+// Timeouts per platform (ms)
+const TIMEOUT_YOUTUBE = 180_000; // 3 minutes — YouTube can be slow with bot detection
+const TIMEOUT_DEFAULT = 120_000; // 2 minutes
+
+// Inter-attempt delay to avoid triggering rate limits (ms)
+const RETRY_DELAY_MS = 800;
+const RETRY_DELAY_SAME_HOST_MS = 1500;
+
 /**
  * Find the yt-dlp executable path.
  * Checks: PATH, WinGet package store, common local dirs.
@@ -70,6 +78,23 @@ if (YT_DLP_VERSION) {
 }
 
 /**
+ * Sleep utility for inter-attempt delays.
+ */
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Create a dedicated temp subdirectory for a download to avoid scanning the
+ * entire system temp folder. Returns the directory path.
+ */
+function createDownloadDir(outputId) {
+  const dir = path.join(TEMP_DIR, `unreel_${outputId}`);
+  fs.mkdirSync(dir, { recursive: true });
+  return dir;
+}
+
+/**
  * Download a video from a URL using yt-dlp
  * Supports YouTube Shorts, Instagram Reels, TikTok public videos
  * @param {string} url - Video URL
@@ -83,24 +108,45 @@ async function downloadVideo(url) {
     );
   }
 
+  // Verify yt-dlp is still accessible (guards against binary disappearing mid-session)
+  try {
+    execSync(`"${YT_DLP_PATH}" --version`, { stdio: 'ignore', timeout: 5000 });
+  } catch {
+    throw new Error(
+      'yt-dlp binary is no longer accessible. It may have been moved or corrupted. ' +
+      'Please reinstall: https://github.com/yt-dlp/yt-dlp/releases'
+    );
+  }
+
   const outputId = uuidv4();
-  // Use %(ext)s so yt-dlp fills in the real extension
-  const outputTemplate = path.join(TEMP_DIR, `unreel_${outputId}.%(ext)s`);
+  const downloadDir = createDownloadDir(outputId);
+  const outputTemplate = path.join(downloadDir, `video.%(ext)s`);
 
   const platform = detectPlatform(url);
   const startTime = Date.now();
+  const timeoutMs = platform === 'YouTube' ? TIMEOUT_YOUTUBE : TIMEOUT_DEFAULT;
 
   const attempts = buildAttemptArgs(url, outputTemplate, platform);
   let lastError = '';
   let bestNonCookieError = '';
   let attemptCount = 0;
+  let lastAttemptLabel = '';
 
-  console.log(`[Unreel] Starting download: ${platform} | ${attempts.length} strategies queued`);
+  console.log(`[Unreel] Starting download: ${platform} | ${attempts.length} strategies queued | timeout ${timeoutMs / 1000}s`);
 
   for (const attempt of attempts) {
     attemptCount++;
+
+    // Add inter-attempt delay to avoid rate-limit escalation
+    if (attemptCount > 1) {
+      const isSameHost = lastAttemptLabel.split(':')[0] === attempt.label.split(':')[0];
+      const delay = isSameHost ? RETRY_DELAY_SAME_HOST_MS : RETRY_DELAY_MS;
+      await sleep(delay);
+    }
+    lastAttemptLabel = attempt.label;
+
     try {
-      const result = await runYtDlp(attempt.args, outputId, platform);
+      const result = await runYtDlp(attempt.args, downloadDir, platform, timeoutMs);
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
       console.log(`[Unreel] Download succeeded: ${attempt.label} (attempt ${attemptCount}/${attempts.length}, ${elapsed}s)`);
       return result;
@@ -113,86 +159,141 @@ async function downloadVideo(url) {
     }
   }
 
-  cleanupByOutputId(outputId);
+  cleanupDownloadDir(downloadDir);
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
   console.error(`[Unreel] All ${attemptCount} download strategies failed for ${platform} in ${elapsed}s`);
-  const errorForUser = (bestNonCookieError || lastError).slice(0, 700);
-  throw new Error(`yt-dlp failed. Platform: ${platform}.\n${errorForUser}`);
+
+  const rawError = bestNonCookieError || lastError;
+  const errorCategory = categorizeError(rawError, platform);
+  throw new Error(`yt-dlp failed. Platform: ${platform}. Category: ${errorCategory}.\n${rawError.slice(0, 700)}`);
+}
+
+/**
+ * Categorize download errors for better user-facing messages.
+ */
+function categorizeError(errorText, platform) {
+  const lower = (errorText || '').toLowerCase();
+
+  if (lower.includes('login required') || lower.includes('private') || lower.includes('not available')) {
+    return 'PRIVATE_OR_LOGIN';
+  }
+  if (lower.includes('sign in to confirm') || lower.includes('bot') || lower.includes('429') || lower.includes('too many requests') || lower.includes('rate limit')) {
+    return 'RATE_LIMITED';
+  }
+  if (lower.includes('requested format is not available') || lower.includes('no video formats')) {
+    return 'FORMAT_UNAVAILABLE';
+  }
+  if (lower.includes('unable to download') || lower.includes('urlopen error') || lower.includes('timed out') || lower.includes('connection') || lower.includes('network')) {
+    return 'NETWORK_ERROR';
+  }
+  if (lower.includes('not a valid url') || lower.includes('unsupported url')) {
+    return 'INVALID_URL';
+  }
+  return 'UNKNOWN';
 }
 
 function buildAttemptArgs(url, outputTemplate, platform) {
   const baseArgs = buildBaseArgs(url, outputTemplate);
   const sharedCookiesFile = getSharedYtDlpCookiesFile();
 
-  const attempts = [{
-    label: 'default',
-    args: [...baseArgs],
-  }];
+  // Start with the default (no cookies, no special args)
+  const attempts = [];
 
-  if (sharedCookiesFile && fs.existsSync(sharedCookiesFile)) {
-    attempts.unshift({
-      label: 'default-shared-cookies',
-      args: [...baseArgs, '--cookies', sharedCookiesFile],
-    });
-  }
-
+  // ── YouTube strategies ──
+  // Ordered by reliability: most reliable first
   if (platform === 'YouTube') {
-    // Try multiple YouTube player client combinations
-    const ytClientStrategies = [
-      { label: 'youtube-web-android', clients: 'web,android' },
-      { label: 'youtube-mweb-ios', clients: 'mweb,ios' },
-      { label: 'youtube-tv-web', clients: 'tv,web' },
-    ];
-    for (const strategy of ytClientStrategies) {
-      attempts.unshift({
-        label: strategy.label,
-        args: [
-          ...buildBaseArgs(url, outputTemplate),
-          '--extractor-args', `youtube:player_client=${strategy.clients}`,
-          ...(sharedCookiesFile && fs.existsSync(sharedCookiesFile) ? ['--cookies', sharedCookiesFile] : []),
-        ],
+    const ytCookieArgs = sharedCookiesFile && fs.existsSync(sharedCookiesFile)
+      ? ['--cookies', sharedCookiesFile]
+      : [];
+
+    // Strategy 1: web + android clients (most reliable combo)
+    attempts.push({
+      label: 'youtube-web-android',
+      args: [
+        ...buildBaseArgs(url, outputTemplate),
+        '--extractor-args', 'youtube:player_client=web,android',
+        ...ytCookieArgs,
+      ],
+    });
+
+    // Strategy 2: mweb + ios (bypasses some blocks)
+    attempts.push({
+      label: 'youtube-mweb-ios',
+      args: [
+        ...buildBaseArgs(url, outputTemplate),
+        '--extractor-args', 'youtube:player_client=mweb,ios',
+        ...ytCookieArgs,
+      ],
+    });
+
+    // Strategy 3: tv + web (for age-restricted or geo-blocked)
+    attempts.push({
+      label: 'youtube-tv-web',
+      args: [
+        ...buildBaseArgs(url, outputTemplate),
+        '--extractor-args', 'youtube:player_client=tv,web',
+        ...ytCookieArgs,
+      ],
+    });
+
+    // Strategy 4: default (no extractor args)
+    if (sharedCookiesFile && fs.existsSync(sharedCookiesFile)) {
+      attempts.push({
+        label: 'youtube-default-shared-cookies',
+        args: [...baseArgs, '--cookies', sharedCookiesFile],
       });
     }
-    // Fallback: skip webpage parsing (can help with bot detection)
+    attempts.push({
+      label: 'youtube-default',
+      args: [...baseArgs],
+    });
+
+    // Strategy 5: skip webpage parsing (helps with bot detection)
     attempts.push({
       label: 'youtube-skip-webpage',
       args: [
         ...buildBaseArgs(url, outputTemplate),
         '--extractor-args', 'youtube:player_skip=webpage;player_client=web,android',
-        ...(sharedCookiesFile && fs.existsSync(sharedCookiesFile) ? ['--cookies', sharedCookiesFile] : []),
+        ...ytCookieArgs,
       ],
     });
-    // Last resort: disable cert check (helps on some networks)
+
+    // Strategy 6: last resort — disable cert check
     attempts.push({
       label: 'youtube-no-cert-check',
       args: [
         ...buildBaseArgs(url, outputTemplate),
         '--extractor-args', 'youtube:player_client=web,android',
         '--no-check-certificates',
-        ...(sharedCookiesFile && fs.existsSync(sharedCookiesFile) ? ['--cookies', sharedCookiesFile] : []),
+        ...ytCookieArgs,
       ],
     });
   }
 
-  if (platform === 'Instagram') {
+  // ── Instagram strategies ──
+  else if (platform === 'Instagram') {
     const normalizedUrls = buildInstagramUrlVariants(url);
-    const DESKTOP_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
-    const MOBILE_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1';
+    const DESKTOP_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
+    const MOBILE_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1';
+
+    // Use a format string that includes audio-only fallback for reels that have
+    // split audio/video streams or audio-only posts.
+    const igFormatArgs = ['--format', 'bestvideo[ext=mp4][height<=720]+bestaudio[ext=m4a]/bestvideo[height<=720]+bestaudio/best[ext=mp4]/best/bestaudio'];
 
     const extractorModes = [
+      { key: 'web-client-api-v1', value: 'instagram:player_client=web;api_version=v1' },
       { key: 'web-client', value: 'instagram:player_client=web' },
       { key: 'api-v1', value: 'instagram:api_version=v1' },
-      { key: 'web-client-api-v1', value: 'instagram:player_client=web;api_version=v1' },
     ];
 
-    // Cookie-based attempts first (if available) — these are most reliable
+    // Cookie-based attempts first (most reliable for Instagram)
     const cookiesFile = getInstagramCookiesFile() || sharedCookiesFile;
     if (cookiesFile && fs.existsSync(cookiesFile)) {
       const cookieUrl = normalizedUrls[0] || url;
-      attempts.unshift({
+      attempts.push({
         label: 'instagram-cookies-file',
         args: [
-          ...buildBaseArgs(cookieUrl, outputTemplate),
+          ...buildBaseArgs(cookieUrl, outputTemplate, igFormatArgs),
           '--extractor-args', 'instagram:player_client=web;api_version=v1',
           '--referer', 'https://www.instagram.com/',
           '--user-agent', DESKTOP_UA,
@@ -202,13 +303,13 @@ function buildAttemptArgs(url, outputTemplate, platform) {
       });
     }
 
+    // Primary URL variants × extractor modes
     for (const candidateUrl of normalizedUrls) {
       for (const mode of extractorModes) {
-        // Desktop UA attempt
         attempts.push({
           label: `instagram-${mode.key}:${candidateUrl}`,
           args: [
-            ...buildBaseArgs(candidateUrl, outputTemplate),
+            ...buildBaseArgs(candidateUrl, outputTemplate, igFormatArgs),
             '--extractor-args', mode.value,
             '--referer', 'https://www.instagram.com/',
             '--user-agent', DESKTOP_UA,
@@ -216,11 +317,11 @@ function buildAttemptArgs(url, outputTemplate, platform) {
           ],
         });
       }
-      // Also try with mobile UA for the best extractor mode
+      // Mobile UA with best extractor mode
       attempts.push({
         label: `instagram-mobile-ua:${candidateUrl}`,
         args: [
-          ...buildBaseArgs(candidateUrl, outputTemplate),
+          ...buildBaseArgs(candidateUrl, outputTemplate, igFormatArgs),
           '--extractor-args', 'instagram:player_client=web;api_version=v1',
           '--referer', 'https://www.instagram.com/',
           '--user-agent', MOBILE_UA,
@@ -229,13 +330,14 @@ function buildAttemptArgs(url, outputTemplate, platform) {
       });
     }
 
+    // Browser cookie attempts (local dev only)
     if (canUseBrowserCookies()) {
       const cookieUrl = normalizedUrls[0] || url;
       for (const browser of INSTAGRAM_BROWSER_CANDIDATES) {
         attempts.push({
           label: `instagram-cookies-from-${browser}`,
           args: [
-            ...buildBaseArgs(cookieUrl, outputTemplate),
+            ...buildBaseArgs(cookieUrl, outputTemplate, igFormatArgs),
             '--extractor-args', 'instagram:player_client=web;api_version=v1',
             '--referer', 'https://www.instagram.com/',
             '--user-agent', DESKTOP_UA,
@@ -246,16 +348,30 @@ function buildAttemptArgs(url, outputTemplate, platform) {
       }
     }
 
-    // Last resort: generic extractor (sometimes works when IG blocks the dedicated one)
+    // Last resort: force generic extractor
     const genericUrl = normalizedUrls[0] || url;
     attempts.push({
       label: 'instagram-force-generic',
       args: [
-        ...buildBaseArgs(genericUrl, outputTemplate),
+        ...buildBaseArgs(genericUrl, outputTemplate, igFormatArgs),
         '--force-generic-extractor',
         '--referer', 'https://www.instagram.com/',
         '--user-agent', DESKTOP_UA,
       ],
+    });
+  }
+
+  // ── Other platforms (TikTok, Twitter/X, etc.) ──
+  else {
+    if (sharedCookiesFile && fs.existsSync(sharedCookiesFile)) {
+      attempts.push({
+        label: 'default-shared-cookies',
+        args: [...baseArgs, '--cookies', sharedCookiesFile],
+      });
+    }
+    attempts.push({
+      label: 'default',
+      args: [...baseArgs],
     });
   }
 
@@ -271,12 +387,14 @@ function canUseBrowserCookies() {
   return process.platform === 'win32';
 }
 
-function buildBaseArgs(targetUrl, outputTemplate) {
+function buildBaseArgs(targetUrl, outputTemplate, formatOverride) {
+  const formatArgs = formatOverride || [
+    '--format', 'bestvideo[ext=mp4][height<=720]+bestaudio[ext=m4a]/bestvideo[height<=720]+bestaudio/best',
+  ];
   return [
     targetUrl,
     '-o', outputTemplate,
-    // Prefer mp4; fall back to any best available format.
-    '--format', 'bestvideo[ext=mp4][height<=720]+bestaudio[ext=m4a]/bestvideo[height<=720]+bestaudio/best',
+    ...formatArgs,
     '--merge-output-format', 'mp4',
     '--max-filesize', '50M',
     '--no-playlist',
@@ -304,19 +422,36 @@ function buildInstagramUrlVariants(rawUrl) {
     if (value && !variants.includes(value)) variants.push(value);
   };
 
-  pushUnique(rawUrl);
-
+  // Handle ddinstagram.com / dd redirect URLs
+  let processedUrl = rawUrl;
   try {
     const parsed = new URL(rawUrl);
+    if (parsed.hostname.includes('ddinstagram.com')) {
+      parsed.hostname = 'www.instagram.com';
+      processedUrl = parsed.toString();
+    }
+  } catch {}
+
+  pushUnique(processedUrl);
+
+  try {
+    const parsed = new URL(processedUrl);
     parsed.hash = '';
-    parsed.search = '';
+    // Remove tracking params but keep essential ones
+    const keepParams = new Set(['img_index']);
+    for (const key of [...parsed.searchParams.keys()]) {
+      if (!keepParams.has(key)) {
+        parsed.searchParams.delete(key);
+      }
+    }
 
     if (parsed.hostname === 'm.instagram.com') {
       parsed.hostname = 'www.instagram.com';
     }
 
-    // Convert some mobile share-style paths to canonical reel paths.
+    // Convert share-style paths to canonical reel paths
     parsed.pathname = parsed.pathname.replace(/^\/share\/reel\//, '/reel/');
+    parsed.pathname = parsed.pathname.replace(/^\/share\/p\//, '/p/');
 
     if (!parsed.pathname.endsWith('/')) {
       parsed.pathname = `${parsed.pathname}/`;
@@ -324,9 +459,18 @@ function buildInstagramUrlVariants(rawUrl) {
 
     pushUnique(parsed.toString());
 
+    // Also try without www
     const noWww = new URL(parsed.toString());
     noWww.hostname = 'instagram.com';
     pushUnique(noWww.toString());
+
+    // If it's a /p/ URL (post that might be video), also try /reel/ variant
+    const reelMatch = parsed.pathname.match(/^\/p\/([A-Za-z0-9_-]+)\//);
+    if (reelMatch) {
+      const reelUrl = new URL(parsed.toString());
+      reelUrl.pathname = `/reel/${reelMatch[1]}/`;
+      pushUnique(reelUrl.toString());
+    }
   } catch {}
 
   return variants;
@@ -383,11 +527,15 @@ function writeCookiesFromBase64(base64Text, fileName) {
   return cookiePath;
 }
 
-const DOWNLOAD_TIMEOUT_MS = 120000; // 2 minutes
-
-function runYtDlp(args, outputId, platform) {
+function runYtDlp(args, downloadDir, platform, timeoutMs) {
   return new Promise((resolve, reject) => {
-    const ytdlp = spawn(YT_DLP_PATH, args);
+    let ytdlp;
+    try {
+      ytdlp = spawn(YT_DLP_PATH, args);
+    } catch (err) {
+      reject(new Error(`Failed to spawn yt-dlp (${YT_DLP_PATH}): ${err.message}`));
+      return;
+    }
 
     let stdout = '';
     let stderr = '';
@@ -397,26 +545,31 @@ function runYtDlp(args, outputId, platform) {
 
     const timer = setTimeout(() => {
       ytdlp.kill('SIGKILL');
-      reject(new Error(`Download timed out after ${DOWNLOAD_TIMEOUT_MS / 1000} seconds.`));
-    }, DOWNLOAD_TIMEOUT_MS);
+      reject(new Error(`Download timed out after ${timeoutMs / 1000} seconds.`));
+    }, timeoutMs);
 
     ytdlp.on('close', code => {
       clearTimeout(timer);
-      const matchedFiles = fs.readdirSync(TEMP_DIR).filter(f => f.startsWith(`unreel_${outputId}`));
+
+      let matchedFiles = [];
+      try {
+        matchedFiles = fs.readdirSync(downloadDir);
+      } catch {}
+
       const downloaded = findDownloadedMediaFile(matchedFiles);
 
       if (code === 0 && downloaded) {
         const title = parsePrintedField(stdout, 'UNREEL_TITLE:') || 'Unknown Video';
         const publishedAt = normalizePublishedDate(parsePrintedField(stdout, 'UNREEL_UPLOAD_DATE:'));
-        const videoPath = path.join(TEMP_DIR, downloaded);
-        const subtitleCaptions = extractCaptionText(matchedFiles, downloaded);
+        const videoPath = path.join(downloadDir, downloaded);
+        const subtitleCaptions = extractCaptionText(matchedFiles, downloaded, downloadDir);
         
         // Extract description from JSON metadata file for full content without truncation
         let description = '';
         const jsonFile = matchedFiles.find(f => f.endsWith('.info.json'));
         if (jsonFile) {
           try {
-            const jsonPath = path.join(TEMP_DIR, jsonFile);
+            const jsonPath = path.join(downloadDir, jsonFile);
             const metadata = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
             description = normalizeText(metadata.description || '');
             fs.unlinkSync(jsonPath);
@@ -439,7 +592,6 @@ function runYtDlp(args, outputId, platform) {
         return;
       }
 
-      cleanupByOutputId(outputId);
       reject(new Error(`yt-dlp exited with code ${code}. ${(stderr || stdout).trim().slice(0, 700)}`));
     });
 
@@ -450,14 +602,17 @@ function runYtDlp(args, outputId, platform) {
   });
 }
 
-function cleanupByOutputId(outputId) {
-  fs.readdirSync(TEMP_DIR)
-    .filter(f => f.startsWith(`unreel_${outputId}`))
-    .forEach(f => {
-      try {
-        fs.unlinkSync(path.join(TEMP_DIR, f));
-      } catch {}
-    });
+/**
+ * Clean up the per-download directory and all its contents.
+ */
+function cleanupDownloadDir(downloadDir) {
+  try {
+    const files = fs.readdirSync(downloadDir);
+    for (const f of files) {
+      try { fs.unlinkSync(path.join(downloadDir, f)); } catch {}
+    }
+    fs.rmdirSync(downloadDir);
+  } catch {}
 }
 
 function findDownloadedMediaFile(files) {
@@ -482,7 +637,7 @@ function mediaPriorityScore(fileName) {
   return 2;
 }
 
-function extractCaptionText(files, mediaFileName) {
+function extractCaptionText(files, mediaFileName, downloadDir) {
   const captionFiles = files.filter((fileName) => {
     if (fileName === mediaFileName) return false;
     const ext = path.extname(fileName).toLowerCase();
@@ -493,7 +648,7 @@ function extractCaptionText(files, mediaFileName) {
 
   const textSegments = [];
   for (const fileName of captionFiles) {
-    const filePath = path.join(TEMP_DIR, fileName);
+    const filePath = path.join(downloadDir, fileName);
     try {
       const raw = fs.readFileSync(filePath, 'utf8');
       const normalized = normalizeCaptionFileText(raw);
@@ -515,7 +670,6 @@ function normalizeCaptionFileText(rawText) {
     .filter(line => !/^\d+$/.test(line))
     .filter(line => !/^(NOTE|STYLE|REGION)\b/i.test(line))
     .filter(line => !/^\d{2}:\d{2}:\d{2}[.,]\d{3}\s+-->\s+\d{2}:\d{2}:\d{2}[.,]\d{3}/.test(line))
-    .filter(line => !/^\d{2}:\d{2}:\d{2}[.,]\d{3}\s+-->\s+\d{2}:\d{2}:\d{2}[.,]\d{3}/.test(line))
     .filter(line => !/^<[^>]+>$/.test(line))
     .map(line => line.replace(/<[^>]+>/g, '').trim())
     .filter(Boolean);
@@ -532,7 +686,7 @@ function normalizeText(text) {
 
 function detectPlatform(url) {
   if (url.includes('youtube.com') || url.includes('youtu.be')) return 'YouTube';
-  if (url.includes('instagram.com')) return 'Instagram';
+  if (url.includes('instagram.com') || url.includes('ddinstagram.com')) return 'Instagram';
   if (url.includes('tiktok.com')) return 'TikTok';
   if (url.includes('t.me') || url.includes('telegram.me')) return 'Telegram';
   if (url.includes('twitter.com') || url.includes('x.com')) return 'Twitter/X';
@@ -543,7 +697,7 @@ function detectPlatform(url) {
 function getYtDlpVersion() {
   if (!YT_DLP_PATH) return null;
   try {
-    return execSync(`${YT_DLP_PATH} --version`, { encoding: 'utf8' }).trim();
+    return execSync(`"${YT_DLP_PATH}" --version`, { encoding: 'utf8' }).trim();
   } catch {
     return null;
   }
