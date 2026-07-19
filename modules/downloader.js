@@ -174,7 +174,7 @@ async function downloadVideo(url) {
 function categorizeError(errorText, platform) {
   const lower = (errorText || '').toLowerCase();
 
-  if (lower.includes('login required') || lower.includes('private') || lower.includes('not available')) {
+  if (lower.includes('login required') || lower.includes('private') || lower.includes('not available') || lower.includes('empty media response')) {
     return 'PRIVATE_OR_LOGIN';
   }
   if (lower.includes('sign in to confirm') || lower.includes('bot') || lower.includes('429') || lower.includes('too many requests') || lower.includes('rate limit')) {

@@ -239,7 +239,7 @@ function getDownloadHint(url, rawError = '') {
 
   if (category === 'PRIVATE_OR_LOGIN') {
     if (platform === 'Instagram') {
-      return 'This reel appears to be private or login-protected. Make sure the post is public, or upload the video file directly.';
+      return 'Instagram requires login to access most reels. This reel could not be downloaded without authentication. Please upload the video file directly instead.';
     }
     return 'This content requires login or is set to private. Please ensure the link is publicly accessible, or upload the file directly.';
   }
@@ -265,10 +265,10 @@ function getDownloadHint(url, rawError = '') {
   }
 
   if (platform === 'Instagram') {
-    if (details.includes('login required') || details.includes('private')) {
-      return 'This reel appears private or login-protected. Make sure the post is public, or upload the file directly.';
+    if (details.includes('login required') || details.includes('private') || details.includes('empty media response')) {
+      return 'Instagram requires authentication to access this reel. Please upload the video file directly.';
     }
-    return 'Instagram blocks some reels depending on account visibility. Try again later, or upload the file directly.';
+    return 'Instagram requires login for most reels. Try uploading the video file directly.';
   }
 
   if (platform === 'TikTok') {

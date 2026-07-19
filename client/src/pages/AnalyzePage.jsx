@@ -72,7 +72,6 @@ export default function AnalyzePage() {
   const [error, setError] = useState('');
   const [canUpload, setCanUpload] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
-  const didRun = useRef(false);
   const tabRefs = useRef({});
 
   const loadingSteps = getSteps(analysisParams?.type);
@@ -114,21 +113,25 @@ export default function AnalyzePage() {
     return () => clearInterval(interval);
   }, [phase, loadingSteps]);
 
-  // API call
+  // API call — uses AbortController so React StrictMode's
+  // unmount/remount cycle aborts the first (stale) request.
   useEffect(() => {
-    if (phase !== 'loading' || !analysisParams?.type || didRun.current) return;
-    didRun.current = true;
+    if (phase !== 'loading' || !analysisParams?.type) return;
+
+    const controller = new AbortController();
 
     async function run() {
       try {
         let res;
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const signal = controller.signal;
 
         if (analysisParams.type === 'url') {
           res = await fetch(apiUrl('/api/analyze/url'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', ...headers },
             body: JSON.stringify({ url: analysisParams.url }),
+            signal,
           });
         } else if (analysisParams.type === 'upload') {
           const form = new FormData();
@@ -137,14 +140,18 @@ export default function AnalyzePage() {
             method: 'POST',
             headers,
             body: form,
+            signal,
           });
         } else if (analysisParams.type === 'text') {
           res = await fetch(apiUrl('/api/analyze/text'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', ...headers },
             body: JSON.stringify({ text: analysisParams.text }),
+            signal,
           });
         }
+
+        if (controller.signal.aborted) return;
 
         const data = await res.json();
 
@@ -161,13 +168,15 @@ export default function AnalyzePage() {
           sessionStorage.setItem('unreel_last_result', JSON.stringify(data));
           navigate('/results/latest', { replace: true });
         }
-      } catch {
+      } catch (err) {
+        if (err.name === 'AbortError') return; // StrictMode unmount — ignore
         setError('Could not connect to the server. Make sure the backend is running.');
         setPhase('error');
       }
     }
 
     run();
+    return () => controller.abort();
   }, [phase, analysisParams, token, navigate]);
 
   function handleAnalyzeUrl(e) {
@@ -175,7 +184,6 @@ export default function AnalyzePage() {
     if (!url.trim()) return;
     const params = { type: 'url', url: url.trim() };
     setAnalysisParams(params);
-    didRun.current = false;
     setPhase('loading');
   }
 
@@ -184,7 +192,6 @@ export default function AnalyzePage() {
     if (!selectedFile) return;
     const params = { type: 'upload', file: selectedFile };
     setAnalysisParams(params);
-    didRun.current = false;
     setPhase('loading');
   }
 
@@ -193,7 +200,6 @@ export default function AnalyzePage() {
     if (transcript.trim().length < 20) return;
     const params = { type: 'text', text: transcript.trim() };
     setAnalysisParams(params);
-    didRun.current = false;
     setPhase('loading');
   }
 
@@ -209,7 +215,6 @@ export default function AnalyzePage() {
     setPhase('input');
     setError('');
     setCanUpload(false);
-    didRun.current = false;
     setAnalysisParams(null);
   }
 
