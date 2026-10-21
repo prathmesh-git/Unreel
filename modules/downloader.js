@@ -9,6 +9,7 @@ const INSTAGRAM_BROWSER_CANDIDATES = ['chrome', 'edge', 'firefox'];
 const BROWSER_COOKIE_LABEL_TOKEN = 'cookies';
 const SUBTITLE_EXTENSIONS = new Set(['.vtt', '.srt', '.ass', '.ssa', '.ttml', '.sbv', '.lrc']);
 const MEDIA_EXTENSIONS = new Set(['.mp4', '.mkv', '.webm', '.mov', '.m4v', '.avi', '.flv', '.wmv', '.ts', '.m4a', '.mp3', '.mka', '.opus']);
+const MIN_RECOMMENDED_VERSION = '2026.08.19';
 let resolvedInstagramCookiesFile = null;
 let resolvedYtDlpCookiesFile = null;
 
@@ -72,9 +73,34 @@ function walkDir(dir, target, depth = 0) {
 // Resolve once at startup
 const YT_DLP_PATH = findYtDlp();
 console.log(`[Unreel] yt-dlp resolved to: ${YT_DLP_PATH || 'NOT FOUND'}`);
-const YT_DLP_VERSION = getYtDlpVersion();
+let YT_DLP_VERSION = getYtDlpVersion();
 if (YT_DLP_VERSION) {
   console.log(`[Unreel] yt-dlp version: ${YT_DLP_VERSION}`);
+  if (YT_DLP_VERSION < MIN_RECOMMENDED_VERSION) {
+    console.warn(`[Unreel] yt-dlp version ${YT_DLP_VERSION} is outdated (recommended: ${MIN_RECOMMENDED_VERSION}+). Attempting auto-update...`);
+    tryAutoUpdate();
+  }
+} else if (YT_DLP_PATH) {
+  console.warn('[Unreel] Could not determine yt-dlp version.');
+}
+
+/**
+ * Attempt to auto-update yt-dlp at startup.
+ * Non-blocking: if it fails, we continue with the existing version.
+ */
+function tryAutoUpdate() {
+  if (!YT_DLP_PATH) return;
+  try {
+    const result = execSync(`"${YT_DLP_PATH}" -U`, { encoding: 'utf8', timeout: 30000 });
+    console.log(`[Unreel] yt-dlp update result: ${result.trim().split('\n').pop()}`);
+    // Re-read version after update
+    YT_DLP_VERSION = getYtDlpVersion();
+    if (YT_DLP_VERSION) {
+      console.log(`[Unreel] yt-dlp version after update: ${YT_DLP_VERSION}`);
+    }
+  } catch (err) {
+    console.warn(`[Unreel] yt-dlp auto-update failed (non-critical): ${err.message.split('\n')[0]}`);
+  }
 }
 
 /**
@@ -174,14 +200,17 @@ async function downloadVideo(url) {
 function categorizeError(errorText, platform) {
   const lower = (errorText || '').toLowerCase();
 
-  if (lower.includes('login required') || lower.includes('private') || lower.includes('not available') || lower.includes('empty media response')) {
+  if (lower.includes('login required') || lower.includes('private') || lower.includes('not available') || lower.includes('empty media response') || lower.includes('requested content is not available')) {
     return 'PRIVATE_OR_LOGIN';
   }
-  if (lower.includes('sign in to confirm') || lower.includes('bot') || lower.includes('429') || lower.includes('too many requests') || lower.includes('rate limit')) {
+  if (lower.includes('sign in to confirm') || lower.includes('bot') || lower.includes('429') || lower.includes('too many requests') || lower.includes('rate limit') || lower.includes('rate-limit')) {
     return 'RATE_LIMITED';
   }
-  if (lower.includes('requested format is not available') || lower.includes('no video formats')) {
+  if (lower.includes('requested format is not available') || lower.includes('no video formats') || lower.includes('403')) {
     return 'FORMAT_UNAVAILABLE';
+  }
+  if (lower.includes('impersonat') || lower.includes('no impersonate target')) {
+    return 'IMPERSONATION_FAILED';
   }
   if (lower.includes('unable to download') || lower.includes('urlopen error') || lower.includes('timed out') || lower.includes('connection') || lower.includes('network')) {
     return 'NETWORK_ERROR';
@@ -200,70 +229,86 @@ function buildAttemptArgs(url, outputTemplate, platform) {
   const attempts = [];
 
   // ── YouTube strategies ──
-  // Ordered by reliability: most reliable first
+  // Ordered by reliability: most reliable first.
+  // Key changes for 2026.08.19+:
+  //   - Use `formats=missing_pot` to pull formats that need PO tokens (avoids 403s)
+  //   - Use `default,-tv_simply` to exclude broken client variants
+  //   - Skip webpage parsing to dodge bot-detection on Shorts
   if (platform === 'YouTube') {
     const ytCookieArgs = sharedCookiesFile && fs.existsSync(sharedCookiesFile)
       ? ['--cookies', sharedCookiesFile]
       : [];
 
-    // Strategy 1: web + android clients (most reliable combo)
+    // Strategy 1: default client with PO token fallback (most reliable for Shorts)
+    attempts.push({
+      label: 'youtube-default-pot',
+      args: [
+        ...buildBaseArgs(url, outputTemplate),
+        '--extractor-args', 'youtube:player_client=default,ios;formats=missing_pot',
+        ...ytCookieArgs,
+      ],
+    });
+
+    // Strategy 2: web + android clients (classic reliable combo)
     attempts.push({
       label: 'youtube-web-android',
       args: [
         ...buildBaseArgs(url, outputTemplate),
-        '--extractor-args', 'youtube:player_client=web,android',
+        '--extractor-args', 'youtube:player_client=web,android;formats=missing_pot',
         ...ytCookieArgs,
       ],
     });
 
-    // Strategy 2: mweb + ios (bypasses some blocks)
+    // Strategy 3: mweb + ios (bypasses some blocks on Shorts)
     attempts.push({
       label: 'youtube-mweb-ios',
       args: [
         ...buildBaseArgs(url, outputTemplate),
-        '--extractor-args', 'youtube:player_client=mweb,ios',
+        '--extractor-args', 'youtube:player_client=mweb,ios;formats=missing_pot',
         ...ytCookieArgs,
       ],
     });
 
-    // Strategy 3: tv + web (for age-restricted or geo-blocked)
+    // Strategy 4: skip webpage parsing + android (helps with bot detection on Shorts)
     attempts.push({
-      label: 'youtube-tv-web',
+      label: 'youtube-skip-webpage-android',
       args: [
         ...buildBaseArgs(url, outputTemplate),
-        '--extractor-args', 'youtube:player_client=tv,web',
+        '--extractor-args', 'youtube:player_skip=webpage,configs;player_client=android;formats=missing_pot',
         ...ytCookieArgs,
       ],
     });
 
-    // Strategy 4: default (no extractor args)
+    // Strategy 5: default excluding broken tv_simply client
+    attempts.push({
+      label: 'youtube-no-tv-simply',
+      args: [
+        ...buildBaseArgs(url, outputTemplate),
+        '--extractor-args', 'youtube:player_client=default,-tv_simply;formats=missing_pot',
+        ...ytCookieArgs,
+      ],
+    });
+
+    // Strategy 6: with shared cookies, no extractor overrides
     if (sharedCookiesFile && fs.existsSync(sharedCookiesFile)) {
       attempts.push({
         label: 'youtube-default-shared-cookies',
         args: [...baseArgs, '--cookies', sharedCookiesFile],
       });
     }
+
+    // Strategy 7: plain default (no extractor args)
     attempts.push({
       label: 'youtube-default',
       args: [...baseArgs],
     });
 
-    // Strategy 5: skip webpage parsing (helps with bot detection)
-    attempts.push({
-      label: 'youtube-skip-webpage',
-      args: [
-        ...buildBaseArgs(url, outputTemplate),
-        '--extractor-args', 'youtube:player_skip=webpage;player_client=web,android',
-        ...ytCookieArgs,
-      ],
-    });
-
-    // Strategy 6: last resort — disable cert check
+    // Strategy 8: last resort — disable cert check
     attempts.push({
       label: 'youtube-no-cert-check',
       args: [
         ...buildBaseArgs(url, outputTemplate),
-        '--extractor-args', 'youtube:player_client=web,android',
+        '--extractor-args', 'youtube:player_client=web,android;formats=missing_pot',
         '--no-check-certificates',
         ...ytCookieArgs,
       ],
@@ -271,60 +316,100 @@ function buildAttemptArgs(url, outputTemplate, platform) {
   }
 
   // ── Instagram strategies ──
+  // Key changes for 2026.08.19+:
+  //   - Removed invalid `player_client` / `api_version` extractor args (YouTube-only)
+  //   - Instagram's valid extractor arg is `app_id` (e.g., `instagram:app_id=web` or `ios`)
+  //   - Added `--impersonate` to mimic real browser TLS fingerprint
+  //   - Updated User-Agents to current 2026 browser versions
+  //   - Cookies are critical: Instagram blocks nearly all anonymous requests
   else if (platform === 'Instagram') {
     const normalizedUrls = buildInstagramUrlVariants(url);
-    const DESKTOP_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
-    const MOBILE_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1';
+    const DESKTOP_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36';
+    const MOBILE_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
 
-    // Use a format string that includes audio-only fallback for reels that have
-    // split audio/video streams or audio-only posts.
+    // Format string with audio-only fallback for reels with split streams
     const igFormatArgs = ['--format', 'bestvideo[ext=mp4][height<=720]+bestaudio[ext=m4a]/bestvideo[height<=720]+bestaudio/best[ext=mp4]/best/bestaudio'];
 
+    // Valid Instagram extractor modes (app_id is the correct arg, NOT player_client)
     const extractorModes = [
-      { key: 'web-client-api-v1', value: 'instagram:player_client=web;api_version=v1' },
-      { key: 'web-client', value: 'instagram:player_client=web' },
-      { key: 'api-v1', value: 'instagram:api_version=v1' },
+      { key: 'app-id-web', args: ['--extractor-args', 'instagram:app_id=web'] },
+      { key: 'app-id-ios', args: ['--extractor-args', 'instagram:app_id=ios'] },
+      { key: 'no-extractor-args', args: [] },
     ];
+
+    // Impersonation args — mimic a real browser's TLS fingerprint
+    const impersonateArgs = ['--impersonate', 'chrome'];
 
     // Cookie-based attempts first (most reliable for Instagram)
     const cookiesFile = getInstagramCookiesFile() || sharedCookiesFile;
     if (cookiesFile && fs.existsSync(cookiesFile)) {
       const cookieUrl = normalizedUrls[0] || url;
+
+      // Best strategy: cookies + impersonation + web app_id
+      attempts.push({
+        label: 'instagram-cookies-impersonate',
+        args: [
+          ...buildBaseArgs(cookieUrl, outputTemplate, igFormatArgs),
+          '--extractor-args', 'instagram:app_id=web',
+          '--referer', 'https://www.instagram.com/',
+          '--user-agent', DESKTOP_UA,
+          ...impersonateArgs,
+          '--cookies', cookiesFile,
+          '--sleep-requests', '1',
+        ],
+      });
+
+      // Cookies without impersonation (fallback if impersonate not supported)
       attempts.push({
         label: 'instagram-cookies-file',
         args: [
           ...buildBaseArgs(cookieUrl, outputTemplate, igFormatArgs),
-          '--extractor-args', 'instagram:player_client=web;api_version=v1',
+          '--extractor-args', 'instagram:app_id=web',
           '--referer', 'https://www.instagram.com/',
           '--user-agent', DESKTOP_UA,
           '--cookies', cookiesFile,
           '--sleep-requests', '1',
         ],
       });
+
+      // Cookies + mobile UA (some reels serve better to mobile clients)
+      attempts.push({
+        label: 'instagram-cookies-mobile',
+        args: [
+          ...buildBaseArgs(cookieUrl, outputTemplate, igFormatArgs),
+          '--extractor-args', 'instagram:app_id=ios',
+          '--referer', 'https://www.instagram.com/',
+          '--user-agent', MOBILE_UA,
+          '--cookies', cookiesFile,
+          '--sleep-requests', '1',
+        ],
+      });
     }
 
-    // Primary URL variants × extractor modes
+    // Primary URL variants × extractor modes (no cookies — less reliable but worth trying)
     for (const candidateUrl of normalizedUrls) {
       for (const mode of extractorModes) {
         attempts.push({
           label: `instagram-${mode.key}:${candidateUrl}`,
           args: [
             ...buildBaseArgs(candidateUrl, outputTemplate, igFormatArgs),
-            '--extractor-args', mode.value,
+            ...mode.args,
             '--referer', 'https://www.instagram.com/',
             '--user-agent', DESKTOP_UA,
+            ...impersonateArgs,
             '--sleep-requests', '1',
           ],
         });
       }
-      // Mobile UA with best extractor mode
+      // Mobile UA variant
       attempts.push({
         label: `instagram-mobile-ua:${candidateUrl}`,
         args: [
           ...buildBaseArgs(candidateUrl, outputTemplate, igFormatArgs),
-          '--extractor-args', 'instagram:player_client=web;api_version=v1',
+          '--extractor-args', 'instagram:app_id=ios',
           '--referer', 'https://www.instagram.com/',
           '--user-agent', MOBILE_UA,
+          ...impersonateArgs,
           '--sleep-requests', '1',
         ],
       });
@@ -338,7 +423,7 @@ function buildAttemptArgs(url, outputTemplate, platform) {
           label: `instagram-cookies-from-${browser}`,
           args: [
             ...buildBaseArgs(cookieUrl, outputTemplate, igFormatArgs),
-            '--extractor-args', 'instagram:player_client=web;api_version=v1',
+            '--extractor-args', 'instagram:app_id=web',
             '--referer', 'https://www.instagram.com/',
             '--user-agent', DESKTOP_UA,
             '--cookies-from-browser', browser,
@@ -363,12 +448,21 @@ function buildAttemptArgs(url, outputTemplate, platform) {
 
   // ── Other platforms (TikTok, Twitter/X, etc.) ──
   else {
+    // Try with impersonation first for platforms that check TLS fingerprints
     if (sharedCookiesFile && fs.existsSync(sharedCookiesFile)) {
+      attempts.push({
+        label: 'default-cookies-impersonate',
+        args: [...baseArgs, '--cookies', sharedCookiesFile, '--impersonate', 'chrome'],
+      });
       attempts.push({
         label: 'default-shared-cookies',
         args: [...baseArgs, '--cookies', sharedCookiesFile],
       });
     }
+    attempts.push({
+      label: 'default-impersonate',
+      args: [...baseArgs, '--impersonate', 'chrome'],
+    });
     attempts.push({
       label: 'default',
       args: [...baseArgs],
@@ -422,11 +516,12 @@ function buildInstagramUrlVariants(rawUrl) {
     if (value && !variants.includes(value)) variants.push(value);
   };
 
-  // Handle ddinstagram.com / dd redirect URLs
+  // Handle proxy/mirror domains that redirect to Instagram
   let processedUrl = rawUrl;
   try {
     const parsed = new URL(rawUrl);
-    if (parsed.hostname.includes('ddinstagram.com')) {
+    const proxyHosts = ['ddinstagram.com', 'imginn.com', 'picuki.com', 'instasaved.net'];
+    if (proxyHosts.some(h => parsed.hostname.includes(h))) {
       parsed.hostname = 'www.instagram.com';
       processedUrl = parsed.toString();
     }
@@ -449,9 +544,18 @@ function buildInstagramUrlVariants(rawUrl) {
       parsed.hostname = 'www.instagram.com';
     }
 
-    // Convert share-style paths to canonical reel paths
+    // Convert share-style paths to canonical reel paths.
+    // Instagram's share links come in many forms:
+    //   /share/reel/<id>  →  /reel/<id>
+    //   /share/p/<id>     →  /p/<id>
+    //   /share/<id>       →  /reel/<id>  (common from the "Share" button in-app)
     parsed.pathname = parsed.pathname.replace(/^\/share\/reel\//, '/reel/');
     parsed.pathname = parsed.pathname.replace(/^\/share\/p\//, '/p/');
+    // Bare share links: /share/<shortcode> → try as /reel/<shortcode>
+    const bareShareMatch = parsed.pathname.match(/^\/share\/([A-Za-z0-9_-]+)\/?$/);
+    if (bareShareMatch) {
+      parsed.pathname = `/reel/${bareShareMatch[1]}/`;
+    }
 
     if (!parsed.pathname.endsWith('/')) {
       parsed.pathname = `${parsed.pathname}/`;
@@ -470,6 +574,14 @@ function buildInstagramUrlVariants(rawUrl) {
       const reelUrl = new URL(parsed.toString());
       reelUrl.pathname = `/reel/${reelMatch[1]}/`;
       pushUnique(reelUrl.toString());
+    }
+
+    // If it's a /reel/ URL, also try /p/ variant (some content is only accessible as /p/)
+    const postMatch = parsed.pathname.match(/^\/reel\/([A-Za-z0-9_-]+)\//);
+    if (postMatch) {
+      const postUrl = new URL(parsed.toString());
+      postUrl.pathname = `/p/${postMatch[1]}/`;
+      pushUnique(postUrl.toString());
     }
   } catch {}
 
@@ -726,6 +838,8 @@ function getDownloaderDiagnostics() {
   return {
     ytDlpPath: YT_DLP_PATH,
     ytDlpVersion: YT_DLP_VERSION,
+    ytDlpMinRecommended: MIN_RECOMMENDED_VERSION,
+    ytDlpUpToDate: YT_DLP_VERSION >= MIN_RECOMMENDED_VERSION,
     ytDlpCookiesConfigured: !!getSharedYtDlpCookiesFile(),
     instagramCookiesConfigured: !!getInstagramCookiesFile(),
     browserCookiesEnabled: canUseBrowserCookies(),

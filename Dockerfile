@@ -13,14 +13,19 @@ RUN npm run build --prefix client
 FROM node:20-slim
 
 # Install runtime dependencies.
+# python3-certifi + python3-brotli are needed for yt-dlp's --impersonate flag
+# (TLS fingerprint impersonation for Instagram/TikTok downloads)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     curl \
     ffmpeg \
     python3 \
+    python3-certifi \
+    python3-brotli \
     && update-ca-certificates \
     && curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp \
     && chmod a+rx /usr/local/bin/yt-dlp \
+    && yt-dlp --version \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

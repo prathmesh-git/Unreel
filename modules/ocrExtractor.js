@@ -1,7 +1,7 @@
 const axios = require('axios');
 
 const GROQ_API = 'https://api.groq.com/openai/v1/chat/completions';
-const VISION_MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct'; // Groq vision, free
+const VISION_MODEL = 'qwen/qwen3.8-27b'; // Groq vision model with image input support
 
 /**
  * Extract on-screen text from video keyframes using Groq vision
@@ -13,7 +13,7 @@ async function extractOnScreenText(base64Frames) {
 
   try {
     // Send up to 4 frames to the vision model
-    const framesToAnalyze = base64Frames.slice(0, 4);
+    const framesToAnalyze = base64Frames.slice(0, 3);
 
     const imageContent = framesToAnalyze.map(b64 => ({
       type: 'image_url',

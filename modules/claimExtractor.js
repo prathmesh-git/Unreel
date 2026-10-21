@@ -2,7 +2,7 @@ const axios = require('axios');
 
 // Groq is free: https://console.groq.com
 const GROQ_API = 'https://api.groq.com/openai/v1/chat/completions';
-const GROQ_MODEL = 'llama-3.1-8b-instant'; // fast, free, great for structured output
+const GROQ_MODEL = 'openai/gpt-oss-20b'; // fast, free, great for structured output
 
 /**
  * Extract factual claims from a transcript using Groq LLaMA

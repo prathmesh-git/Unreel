@@ -248,6 +248,10 @@ function getDownloadHint(url, rawError = '') {
     return 'The video format is temporarily unavailable on this platform. Please retry in a moment or upload the file directly.';
   }
 
+  if (category === 'IMPERSONATION_FAILED') {
+    return 'The server could not impersonate a browser session for this platform. Please retry or upload the file directly.';
+  }
+
   if (category === 'NETWORK_ERROR') {
     return 'A network error occurred while downloading. Please check your connection and try again.';
   }
